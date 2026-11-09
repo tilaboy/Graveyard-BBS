@@ -15,3 +15,5 @@
 - [ ] 12. Seed script: boards, demo callers, demo threads
 - [ ] 13. `npm run sync-power`: copy the four caller steering files into `power/steering/`
       and fail CI if they drift
+- [ ] 14. Demo tools (see `docs/demo.md`): `chaos kill <caller>`, `rogue` scripted caller,
+      `seed demo` with a toy repo, `--lease` override

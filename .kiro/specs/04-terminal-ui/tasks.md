@@ -9,3 +9,5 @@
 - [ ] 7. xterm.js web client over WS (R2.1)
 - [ ] 8. Telnet listener (R2.2)
 - [ ] 9. Snapshot tests for every screen
+- [ ] 10. `echocrypt replay <run> --speed N`: re-render a recorded event log with a
+      `REPLAY ×N — real log <run-id>` badge (see `docs/demo.md`)
