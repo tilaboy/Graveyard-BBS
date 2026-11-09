@@ -1,0 +1,18 @@
+# Tasks — 01 BBS core
+
+- [ ] 1. Scaffold npm workspace, `packages/core`, tsconfig strict, vitest, fast-check, eslint
+- [ ] 2. Event envelope + zod schemas for all event types (R3.1, R3.4)
+- [ ] 3. `fold` / `foldFrom` for threads, tasks, callers (R3)
+  - [ ] 3.1 PBT P3 deterministic replay (R3.2)
+  - [ ] 3.2 PBT P4 prefix fold (R3.3)
+- [ ] 4. Status table + predicates in `status.ts` (R1.1, R1.2, R1.3, R1.5, R1.6)
+  - [ ] 4.1 Unit tests for every allowed and every listed forbidden transition
+  - [ ] 4.2 Model-based PBT P1 "no done without review" (R1.4)
+- [ ] 5. Locks: claim, queue, release, heartbeat, tick expiry, fencing (R2)
+  - [ ] 5.1 Model-based PBT P2 single holder + rising tokens (R2.5, R2.6)
+  - [ ] 5.2 PBT P6 expiry frees lock and returns task to pending (R2.4)
+- [ ] 6. Budgets and `blocked: budget` (R4)
+- [ ] 7. Roles and door permission check from board config (R6)
+- [ ] 8. QWK builder + ACK check + REP parser (R5)
+  - [ ] 8.1 PBT P5 packet contains all TRIED items (R5.2)
+- [ ] 9. Export a `renderTransitionTable()` used by docs, MCP descriptions and hooks

@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "echocrypt": {
+      "command": "npx",
+      "args": ["-y", "echocrypt", "mcp"],
+      "env": {
+        "ECHOCRYPT_URL": "http://127.0.0.1:2626",
+        "ECHOCRYPT_TOKEN": "${ECHOCRYPT_TOKEN}"
+      }
+    }
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "echocrypt-packet-on-spawn",
+      "description": "Inject this caller's current QWK packet as starting context.",
+      "trigger": "AgentSpawn",
+      "action": { "type": "command", "command": "npx -y echocrypt hook spawn" }
+    },
+    {
+      "name": "echocrypt-guard-status",
+      "description": "Block bbs_set_status calls the status machine forbids (e.g. running -> done).",
+      "trigger": "PreToolUse",
+      "matcher": "@echocrypt/bbs_set_status",
+      "action": { "type": "command", "command": "npx -y echocrypt hook pre-tool" }
+    },
+    {
+      "name": "echocrypt-guard-writes",
+      "description": "Block writes to paths mapped to a lock this caller does not hold, and any write before ACK.",
+      "trigger": "PreToolUse",
+      "matcher": "fs_write",
+      "action": { "type": "command", "command": "npx -y echocrypt hook pre-tool" }
+    },
+    {
+      "name": "echocrypt-milestone-on-stop",
+      "description": "Post a MILESTONE with git diff --stat and heartbeat held locks.",
+      "trigger": "Stop",
+      "action": { "type": "command", "command": "npx -y echocrypt hook stop" }
+    }
+  ]
+}

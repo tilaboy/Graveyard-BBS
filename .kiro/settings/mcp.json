@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "echocrypt": {
+      "command": "node",
+      "args": ["packages/server/dist/cli.js", "mcp"],
+      "env": {
+        "ECHOCRYPT_URL": "http://127.0.0.1:2626",
+        "ECHOCRYPT_TOKEN": "${ECHOCRYPT_TOKEN}"
+      },
+      "disabled": true
+    }
+  }
+}
