@@ -11,7 +11,7 @@ import {
   unchecked,
   type State,
 } from "../src/planner.js";
-import { BOARDS, Log, of, opts, spawns } from "./log.js";
+import { Log, of, opts, spawns } from "./log.js";
 
 const O = opts();
 const roots = () =>
