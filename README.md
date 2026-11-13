@@ -16,25 +16,27 @@ Built for [Kiroween 2026](https://kiroween.devpost.com/), category **Resurrectio
         node 1 · 14400 baud · 3 callers online · sysop is IN
 ```
 
-## Why a BBS?
+## Why
 
-Multi-agent coding has the same problems a dial-up BBS solved in 1992:
+Agents are fast. **The human is the bottleneck.** One developer can start ten agents but
+cannot watch ten chat windows. A 1990s BBS was built for exactly that: many callers, one busy
+sysop.
 
-| Problem in a multi-agent ADE | BBS answer we resurrect |
+| Pain for a solo dev with many agents | BBS answer we resurrect |
 |---|---|
-| Many workers, one shared machine | Callers take turns on nodes |
-| Two agents edit the same schema / lockfile | A **door** admits one caller at a time ("Door busy, you are #2") |
+| Too many agents to monitor | Every task is a **thread** with a live status badge |
+| Can't tell which agent needs you | `???` posts page the **Sysop** and blink until answered |
+| Can't see what was done | Threads are an append-only log you can replay |
+| Agents forget; lessons stay in one project | **Bulletins**: a knowledge hub (Kiro Crew) feeds lessons into the next task, across projects |
+| Agents claim "done" too early | No one moves `running → done` without tests and review, **not even the Sysop** |
 | A new agent does not know what was tried | **QWK packet**: the offline mail bundle becomes the hand-off context |
-| Agent claims "tests pass" | Doors run the command on the server and post the **evidence** |
-| Work must be visible and replayable | Threads are an append-only message log |
-| A human must decide some things | `???` posts page the **Sysop** |
-| Runaway agents burn credits | Every call has **time left** (turn, wall-clock and credit budgets) |
+| Two agents touch one shared file | A **door** admits one caller at a time (rare: each task has its own worktree) |
 
 ## Core concepts
 
 | Term | Meaning |
 |---|---|
-| Board | A topic area with its own pipeline, agents and doors: `#websites`, `#bugfix`, `#media`, `#sysop` |
+| Board | A topic area with its own pipeline, agents and doors: `#websites`, `#arcade`, `#slides`, `#bugfix`, `#media`, `#sysop` |
 | Thread | One task. The root post is the goal; replies are typed messages |
 | Stage | A step in the board's pipeline (`design → build → review → deploy`) |
 | Status | The task lifecycle: `pending → running → awaiting-review → done`, plus `blocked`, `cancelled` |

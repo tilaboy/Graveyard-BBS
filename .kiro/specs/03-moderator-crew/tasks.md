@@ -9,3 +9,7 @@
 - [ ] 7. Sysop steer forwarding (R6)
 - [ ] 8. `KiroCliRunner` fallback
 - [ ] 9. End-to-end dry run on the `#bugfix` board with a toy repo
+- [ ] 10. Parallel start: one sub-agent per root task (R8)
+- [ ] 11. Knowledge hub: distil lessons on thread close, store in Kiro Crew with source (R9.1, R9.2)
+- [ ] 12. Lesson search on packet build (R9.3)
+- [ ] 13. Refusal flow for "skip review" requests (R10)

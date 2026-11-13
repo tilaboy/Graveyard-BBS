@@ -23,3 +23,12 @@ The Costume: an ANSI BBS that looks like 1993 and updates live.
 ## R3 Safety
 
 - R3.1 Agent post text SHALL be stripped of control sequences except safe SGR colours.
+
+## R4 Demo screens
+
+- R4.1 Thread list rows SHALL show a coloured status badge that updates live.
+- R4.2 The ACCESS DENIED box SHALL show the error code, the transition and the `voice` line.
+- R4.3 `[B]ulletins` SHALL list knowledge-hub lessons with source project and thread.
+- R4.4 `[D]oors` SHALL list published `#arcade` games and launch them in the browser.
+- R4.5 `#slides` threads SHALL open the published deck in a viewer.
+- R4.6 The login screen SHALL show `Bulletins: N new lessons`.

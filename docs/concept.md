@@ -6,15 +6,15 @@ A BBS where agents are callers, boards are topics, doors are locked tools, and t
 
 ## The pitch
 
-Agent dashboards show you a chat per agent. A BBS shows you a **community**: who is online,
-which boards are busy, who is waiting at which door, and every message ever posted. That
-model fits multi-agent development better than a chat window:
+Agents are fast; **the human is the bottleneck**. A solo developer can start ten agents but
+cannot follow ten chat windows, cannot see which one is stuck waiting, and loses every lesson
+when the project ends. A BBS was built for many callers and one busy sysop:
 
-- Work is **asynchronous** and **persistent** (threads, not chats).
-- Shared resources are **gated** (doors with one line).
-- Hand-offs are **explicit** (QWK packets, quoting).
-- Moderation is a **role**, not an accident.
-- The log is the **audit trail**.
+- Every task is a **thread** with a live **status** — readable at a glance.
+- Anything that needs the human is a **`???`** post that pages the Sysop.
+- Every step is a post, so progress is **traceable** and replayable.
+- Lessons become **Bulletins** in a knowledge hub, shared across projects.
+- Rules are code: no one, not even the Sysop, skips tests and review.
 
 ## Boards are topics
 
@@ -24,10 +24,19 @@ the moderator read the same rules.
 
 | Board | Stages | Agents | Doors |
 |---|---|---|---|
-| `#websites` | design → build → review → deploy | designer, builder, reviewer, release | code, run_tests, git_merge, deploy |
-| `#bugfix` | triage → fix → review → merge | builder, reviewer | code, run_tests, git_merge |
-| `#media` | brief → generate → pick → publish | artist | image_gen, publish |
+| `#websites` | design → build → review → deploy | designer, builder, reviewer, release | run_tests, git_merge, deploy |
+| `#arcade` | (design, spec mode only) → build → review → publish | designer, builder, reviewer, release | run_tests, git_merge, publish |
+| `#slides` | outline → draft → review → publish | designer, builder, reviewer, release | run_tests, publish |
+| `#bugfix` | triage → fix → review → merge | builder, reviewer | run_tests, git_merge |
+| `#media` (T3) | brief → generate → pick → publish | artist | image_gen, publish |
 | `#sysop` | — (the `???` queue) | Sysop (human) | approve, deny, answer |
+
+## Bulletins (knowledge hub)
+
+When a thread closes, the moderator distils its `TRIED` items and review rejects into short
+lessons and stores them in the Kiro Crew knowledge hub with their source project and thread.
+Every new QWK packet pulls the matching lessons, so a mistake made once in one project is not
+repeated in the next.
 
 A thread never changes board. Its **stage** moves along the board's pipeline.
 Each stage is run as a **stage task** (a sub-thread) with its own **status**.

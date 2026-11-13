@@ -19,6 +19,12 @@ can finish work without review.
 - R1.5 WHEN the requester of `awaiting-review → done` is the task owner THEN the system SHALL
   reject with `SELF_REVIEW`.
 - R1.6 WHEN a reviewer rejects THEN the system SHALL emit one `TRIED` event per reason.
+- R1.7 WHEN any caller, including the Sysop, requests `done` THEN the system SHALL accept it only
+  from `awaiting-review`, from a `reviewer`, after a `REVIEW pass`. The Sysop role SHALL NOT be
+  able to post `REVIEW` or set `done`.
+- R1.8 Every domain error SHALL carry a `hint` and a themed `voice` line for the terminal.
+- R1.9 **[PBT]** For every sequence of commands from every role (sysop included), no task SHALL
+  reach `done` without a `REVIEW pass` by a caller other than its owner.
 
 ## R2 Locks
 
@@ -63,6 +69,8 @@ not repeat failed work.
 - R5.4 WHEN the packet exceeds the token limit THEN the builder SHALL shorten `summary` first
   and SHALL never drop `tried` entries.
 - R5.5 `parseRep(text)` SHALL validate a REP packet and reject unknown evidence ids.
+- R5.6 WHEN matched lessons are given THEN the packet SHALL include a `lessons` section after
+  `tried`, each with its source project and thread; lessons MAY be shortened, `tried` never.
 
 ## R6 Roles
 

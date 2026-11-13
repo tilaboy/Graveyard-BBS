@@ -16,3 +16,7 @@
 - [ ] 8. QWK builder + ACK check + REP parser (R5)
   - [ ] 8.1 PBT P5 packet contains all TRIED items (R5.2)
 - [ ] 9. Export a `renderTransitionTable()` used by docs, MCP descriptions and hooks
+- [ ] 10. "No one skips review": sysop cannot post REVIEW or set done (R1.7)
+  - [ ] 10.1 PBT all roles incl. sysop never reach done without REVIEW pass (R1.9)
+- [ ] 11. Themed `voice` lines for every domain error in `voice.ts` (R1.8)
+- [ ] 12. `lessons` section in QWK packets (R5.6)

@@ -28,7 +28,7 @@ export const TRANSITIONS = [
   { from: "running",         to: "blocked",         who: ["owner", "server"],     needs: ["reason"] },
   { from: "blocked",         to: "running",         who: ["server"],              needs: ["reason_cleared"] },
   { from: "running",         to: "awaiting-review", who: ["owner"],               needs: ["fresh_evidence"] },
-  { from: "awaiting-review", to: "done",            who: ["reviewer", "sysop"],   needs: ["review_pass", "not_owner", "gate"] },
+  { from: "awaiting-review", to: "done",            who: ["reviewer"],            needs: ["review_pass", "not_owner", "gate"] },
   { from: "awaiting-review", to: "running",         who: ["reviewer"],            needs: ["review_reject"] },
   { from: "running",         to: "pending",         who: ["server"],              needs: ["lease_expired"] },
   { from: "blocked",         to: "pending",         who: ["server"],              needs: ["lease_expired"] },
@@ -58,7 +58,14 @@ type Lock = { name: string; holder?: { caller; task; token; expiresAt }; queue: 
 ## Errors
 
 `ILLEGAL_TRANSITION | NO_EVIDENCE | SELF_REVIEW | ROLE_DENIED | NO_ACK | STALE_TOKEN |
-BUDGET_EXHAUSTED | NOT_FOUND`. Each carries a human-readable `hint` shown on the terminal.
+BUDGET_EXHAUSTED | NOT_FOUND`. Each carries a plain `hint` and a themed `voice` line
+(Halloween style, from a fixed table in `core/src/voice.ts`) shown in the ACCESS DENIED box.
+
+## Lessons in QWK packets
+
+`buildQwk` takes an optional `lessons: Lesson[]` (already matched by the server) and renders
+them as a `lessons` section after `tried`: text, source project, source thread. Matching and
+storage live outside core (see spec 03).
 
 ## Testing strategy
 

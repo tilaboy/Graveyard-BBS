@@ -11,3 +11,7 @@
 - [ ] 9. Snapshot tests for every screen
 - [ ] 10. `echocrypt replay <run> --speed N`: re-render a recorded event log with a
       `REPLAY ×N — real log <run-id>` badge (see `docs/demo.md`)
+- [ ] 11. Live status badges in thread lists (R4.1)
+- [ ] 12. ACCESS DENIED box with voice line (R4.2)
+- [ ] 13. Bulletins view + login counter (R4.3, R4.6)
+- [ ] 14. Doors menu for games, deck viewer for slides (R4.4, R4.5)

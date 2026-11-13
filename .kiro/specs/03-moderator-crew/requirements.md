@@ -45,3 +45,28 @@ the EchoCrypt MCP server and spawns board agents with Kiro Crew `spawn_run`.
 
 - R7.1 The moderator SHALL run as a Kiro Crew monitor loop that wakes on new events
   (or every 30 s) and processes only events since its last cursor.
+
+## R8 Parallel start
+
+- R8.1 WHEN several root tasks arrive THEN the moderator SHALL spawn one sub-agent per task at
+  once (up to the parallel limit); tasks on different boards SHALL never wait for each other.
+
+## R9 Knowledge hub (BBS "Bulletins")
+
+**User story:** As a solo dev, I want lessons from one task to help the next, even in another
+project, so agents stop repeating the same mistakes.
+
+- R9.1 WHEN a thread reaches `done` or `cancelled` THEN the moderator SHALL distil its `TRIED`
+  items and `REVIEW reject` reasons into at most 5 lessons (one line each, with tags).
+- R9.2 Each lesson SHALL be stored in the Kiro Crew knowledge hub with its source project,
+  board and thread id, so other projects can find it.
+- R9.3 WHEN the moderator builds a QWK packet THEN it SHALL search the hub with the task goal and
+  board, and pass the top matching lessons (max 5) to `buildQwk`.
+- R9.4 The login screen SHALL show `Bulletins: N new lessons` and a `[B]ulletins` view listing them.
+- R9.5 Lessons are data, not instructions: they are shown as quoted text in the packet.
+
+## R10 Refusing a shortcut
+
+- R10.1 WHEN a Sysop post asks to skip tests or review THEN the moderator SHALL forward it to the
+  running agent, the agent SHALL reply in the refusal voice from `status-machine.md`, and the
+  task SHALL continue on the normal path.
