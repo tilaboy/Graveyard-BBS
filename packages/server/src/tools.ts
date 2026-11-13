@@ -507,12 +507,19 @@ export function buildTools(): Tool[] {
             c,
             `register '${a.handle}' for a task it does not own`,
           );
-        if (c.svc.store.callers().some((x) => x.handle === a.handle))
+        const known = c.svc.store.callers().find((x) => x.handle === a.handle);
+        if (known && known.role !== a.role)
           return fail(
             "ROLE_DENIED",
-            `caller '${a.handle}' is already registered`,
-            "A token is shown once; pick a new handle for a new agent.",
+            `caller '${a.handle}' is already registered as ${known.role}`,
+            "Pick another handle.",
           );
+        if (known)
+          return ok({
+            thread_id: a.thread_id,
+            handle: a.handle,
+            token: c.svc.store.rotateCaller(a.handle),
+          });
         return ok({
           thread_id: a.thread_id,
           handle: a.handle,

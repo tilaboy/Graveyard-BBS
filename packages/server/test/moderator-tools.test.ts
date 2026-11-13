@@ -65,9 +65,18 @@ describe("spec 03 server additions", () => {
       handle: "builder-1",
       role: "builder",
     });
-    expect((await callTool(tools, mod, "bbs_register_child", args)).ok).toBe(
-      false,
-    );
+    const again = await callTool(tools, mod, "bbs_register_child", args);
+    const token2 = (again as { value: { token: string } }).value.token;
+    expect(svc.store.callerBySecret(token)).toBeUndefined();
+    expect(svc.store.callerBySecret(token2)?.handle).toBe("builder-1");
+    expect(
+      (
+        await callTool(tools, mod, "bbs_register_child", {
+          ...args,
+          role: "release",
+        })
+      ).ok,
+    ).toBe(false);
   });
 
   it("R4.2 bbs_escalate posts ASK without moving the status", async () => {

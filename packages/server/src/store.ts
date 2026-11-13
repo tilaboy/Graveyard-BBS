@@ -94,6 +94,15 @@ export class Store {
     return secret;
   }
 
+  /** Spec 03 R4.1: a respawned agent gets a fresh secret; the old one stops working. */
+  rotateCaller(handle: string): string {
+    const secret = `gy_${randomBytes(24).toString("hex")}`;
+    this.db
+      .prepare("UPDATE callers SET token_hash = ? WHERE handle = ?")
+      .run(hashSecret(secret), handle);
+    return secret;
+  }
+
   callerBySecret(secret: string): CallerRow | undefined {
     const row = this.db
       .prepare("SELECT handle, role FROM callers WHERE token_hash = ?")
