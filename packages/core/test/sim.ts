@@ -139,6 +139,18 @@ function ownerClaim(w: World, t: string, lock: string): void {
   w.do({ type: "claim", actor: CAST[OWNER[t]!]!, thread_id: t, lock });
 }
 
+/** Adversary: bring a task to `upTo` (3 = running, 6 = reviewed) legally, then ask `h` for done. */
+function shortcut(w: World, t: string, h: string, upTo: number): void {
+  drive(w, t, OWNER[t]!, "r2", upTo);
+  w.do({
+    type: "set_status",
+    actor: CAST[h]!,
+    thread_id: t,
+    to: "done",
+    gate_ok: true,
+  });
+}
+
 /** All commands, including illegal ones. Weighted toward reaching deep states. */
 export const commandArbs: fc.Arbitrary<Cmd>[] = [
   thread.map((t) =>
