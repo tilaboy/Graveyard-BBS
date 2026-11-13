@@ -1,0 +1,417 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`snapshots: every screen (task 9) > boards  1`] = `
+" GRAVEYARD BBS · boards                                                               sound off [M] 
+  board         open   total  busy doors
+▶ #arcade       0      1      — 🕸 idle
+  #slides       1      1      —
+  #websites     1      1      —
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ↑↓ select · Enter open · Esc back
+· ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ "
+`;
+
+exports[`snapshots: every screen (task 9) > bulletins  1`] = `
+" GRAVEYARD BBS · bulletins                                                            sound off [M] 
+  Bulletins — 1 lesson in the hub (an epitaph)
+▶ 🪦 source: graveyard-bbs / websites-landing · forms
+      Validate email on the server.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ↑↓ select · Enter open source thread · Esc back
+· ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ "
+`;
+
+exports[`snapshots: every screen (task 9) > bye  1`] = `
+" GRAVEYARD BBS · goodbye                                                              sound off [M] 
+
+
+  NO CARRIER
+  The line goes cold… you are logged out.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
+· ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ "
+`;
+
+exports[`snapshots: every screen (task 9) > deck  1`] = `
+" GRAVEYARD BBS · deck viewer                                                          sound off [M] 
+  Deck pitch  (thread slides-pitch, running)
+  [Enter] open the viewer: published/decks/pitch/index.html
+
+    1. Six slides drafted.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ Enter open viewer · Esc back
+· ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ "
+`;
+
+exports[`snapshots: every screen (task 9) > doors  1`] = `
+" GRAVEYARD BBS · doors                                                                sound off [M] 
+  Doors (locks)
+  🕸 No door has been touched.
+
+  #arcade games and #slides decks
+▶ game  snake                 from arcade-snake  [Enter] launch
+  deck  pitch                 from slides-pitch  [Enter] view deck
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ↑↓ select · Enter launch/view · Esc back
+· ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ "
+`;
+
+exports[`snapshots: every screen (task 9) > log  1`] = `
+" GRAVEYARD BBS · log                                                                  sound off [M] 
+  #1 20:00:01 moderator-1 TASK      websites-landing
+  #2 20:00:02 moderator-1 SYSTEM    websites-landing
+  #3 20:00:03 builder-1   ACK       websites-landing
+  #4 20:00:04 builder-1   STATUS    websites-landing
+  #5 20:00:05 builder-1   MILESTONE websites-landing
+  #6 20:00:06 builder-1   ASK       websites-landing
+  #7 20:00:07 builder-1   STATUS    websites-landing
+  #8 20:00:08 moderator-1 TASK      arcade-snake
+  #9 20:00:09 moderator-1 SYSTEM    arcade-snake
+  #10 20:00:10 builder-2   ACK       arcade-snake
+  #11 20:00:11 builder-2   STATUS    arcade-snake
+  #12 20:00:12 server      EVIDENCE  arcade-snake
+  #13 20:00:13 server      EVIDENCE  arcade-snake
+  #14 20:00:14 builder-2   STATUS    arcade-snake
+  #15 20:00:15 reviewer-1  REVIEW    arcade-snake
+  #16 20:00:16 reviewer-1  STATUS    arcade-snake
+  #17 20:00:17 moderator-1 TASK      slides-pitch
+  #18 20:00:18 moderator-1 SYSTEM    slides-pitch
+  #19 20:00:19 builder-1   ACK       slides-pitch
+  #20 20:00:20 builder-1   STATUS    slides-pitch
+  #21 20:00:21 server      EVIDENCE  slides-pitch
+  #22 20:00:22 builder-1   MILESTONE slides-pitch
+
+
+
+
+ Esc back
+· ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ "
+`;
+
+exports[`snapshots: every screen (task 9) > login  1`] = `
+" GRAVEYARD BBS · login                                                                sound off [M] 
+
+  ╔═╗┬─┐┌─┐┬  ┬┌─┐┬ ┬┌─┐┬─┐┌┬┐  ╔╗ ╔╗ ╔═╗
+  ║ ╦├┬┘├─┤└┐┌┘├┤ └┬┘├─┤├┬┘ ││  ╠╩╗╠╩╗╚═╗
+  ╚═╝┴└─┴ ┴ └┘ └─┘ ┴ ┴ ┴┴└──┴┘  ╚═╝╚═╝╚═╝
+
+     _.-._      
+    | RIP |   † 
+  __|_____|__/|_
+
+  Node 1 · 14400 baud · 4 callers haunting
+  🪦 Bulletins: 0 new lessons
+
+  Press any key to enter… (any key skips the animation)
+
+
+
+
+
+
+
+
+
+
+
+
+
+ any key: enter
+· ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ "
+`;
+
+exports[`snapshots: every screen (task 9) > menu  1`] = `
+" GRAVEYARD BBS · main menu                                                            sound off [M] 
+
+  [B]oards   [W]ho's online   [S]ysop queue (1)   [D]oors   [L]og
+  [U] Bulletins (0 lessons)   [M]ute sound   [G]oodbye
+
+  ❓🦇 1 open ASK: the spirits summon you
+
+  🔥 running        rises from the grave × 1
+  ⛓ blocked         trapped in the crypt × 1
+  ⚰ done            laid to rest × 1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ B W S D L U  M mute  G goodbye
+· ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ "
+`;
+
+exports[`snapshots: every screen (task 9) > sysop  1`] = `
+" GRAVEYARD BBS · sysop queue                                                          sound off [M] 
+  Sysop queue — 1 waiting
+▶ ❓🦇 websites-landing from builder-1 · ask e6
+      ❓🦇 Dark theme or blood-red? (answer A or B)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ↑↓ select · A answer · P approve · N deny · Enter open thread · Esc back
+· ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ "
+`;
+
+exports[`snapshots: every screen (task 9) > thread arcade-snake 1`] = `
+" GRAVEYARD BBS · thread                                                               sound off [M] 
+  arcade-snake  ⚰ done            laid to rest
+  owner builder-2 · turns left 50 · seconds left 3600
+
+  #8 20:00:08 moderator-1  TASK
+      Small door game
+  #11 20:00:11 builder-2    🔥 running        rises from the grave (was pending)
+  #12 20:00:12 server       🧪 EVIDENCE [exit 0]
+      door run_tests · 42 ms · commit abcdef1
+  #13 20:00:13 server       🧪 EVIDENCE [exit 0]
+      door publish · 42 ms · commit abcdef1
+  #14 20:00:14 builder-2    🔮 awaiting-review awaits the reviewer (was running)
+  #15 20:00:15 reviewer-1   REVIEW pass
+      ok
+  #16 20:00:16 reviewer-1   ⚰ done            laid to rest (was awaiting-review)
+
+
+
+
+
+
+
+
+
+
+
+
+ ↑↓ scroll · A answer · P approve · N deny · X force done · Esc back
+· ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ "
+`;
+
+exports[`snapshots: every screen (task 9) > thread websites-landing 1`] = `
+" GRAVEYARD BBS · thread                                                               sound off [M] 
+  websites-landing  ⛓ blocked         trapped in the crypt (ask:e6)
+  owner builder-1 · turns left 50 · seconds left 3600
+
+  #1 20:00:01 moderator-1  TASK
+      Haunted landing page
+  #4 20:00:04 builder-1    🔥 running        rises from the grave (was pending)
+  #5 20:00:05 builder-1    MILESTONE
+      🔥 The signup form has taken shape in the dark. Files: form.html, api.ts.
+  #6 20:00:06 builder-1    ❓🦇 ASK (unanswered) the spirits summon you
+      ❓🦇 Dark theme or blood-red? (answer A or B)
+  #7 20:00:07 builder-1    ⛓ blocked         trapped in the crypt (was running, ask:e6)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ↑↓ scroll · A answer · P approve · N deny · X force done · Esc back
+· ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ "
+`;
+
+exports[`snapshots: every screen (task 9) > threads  1`] = `
+" GRAVEYARD BBS · threads                                                              sound off [M] 
+  #websites  1 thread
+▶ ⛓ blocked         websites-landing         builder-1    Haunted landing page (ask:e6)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ↑↓ select · Enter open · Esc back
+· ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ "
+`;
+
+exports[`snapshots: every screen (task 9) > who  1`] = `
+" GRAVEYARD BBS · who's online                                                         sound off [M] 
+  caller        role       board       status            lock / queue          left   state
+  moderator-1   moderator  —           —                 —                     —      haunting
+  builder-1     builder    #slides     🔥 running        —                     60:00  haunting
+  builder-2     builder    —           —                 —                     —      haunting
+  reviewer-1    reviewer   —           —                 —                     —      haunting
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ Esc back
+· ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ "
+`;
