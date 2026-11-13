@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Graveyard BBS</title>
+    <link rel="stylesheet" href="xterm.css" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        background: #000;
+        color: #b8b8b8;
+        font: 14px monospace;
+      }
+      #runs {
+        padding: 4px 8px;
+      }
+      #runs a {
+        color: #ff8700;
+        margin-right: 12px;
+      }
+      #term {
+        display: inline-block;
+        padding: 4px;
+      }
+    </style>
+  </head>
+  <body data-mode="__MODE__">
+    <nav id="runs" aria-label="Recorded runs"></nav>
+    <div id="term" role="application" aria-label="Graveyard BBS terminal"></div>
+    <noscript
+      >Graveyard BBS needs JavaScript. Telnet works too: telnet 127.0.0.1
+      2323</noscript
+    >
+    <script src="client.js"></script>
+  </body>
+</html>

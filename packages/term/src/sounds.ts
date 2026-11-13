@@ -53,10 +53,10 @@ function addNoise(
       rnd() * amp * (decay > 0 ? Math.exp(-i / SAMPLE_RATE / decay) : 1);
 }
 
-const clip = (a: Float32Array): Float32Array =>
+const clip = (a: Float32Array<ArrayBuffer>): Float32Array<ArrayBuffer> =>
   a.map((x) => Math.max(-1, Math.min(1, x)));
 
-const MAKE: Record<SoundName, () => Float32Array> = {
+const MAKE: Record<SoundName, () => Float32Array<ArrayBuffer>> = {
   /** 14400 modem handshake flavour: answer tone, carrier warble, hiss. About 3 s. */
   modem() {
     const o = buf(3);
@@ -123,6 +123,6 @@ const MAKE: Record<SoundName, () => Float32Array> = {
   },
 };
 
-export function synth(name: SoundName): Float32Array {
+export function synth(name: SoundName): Float32Array<ArrayBuffer> {
   return MAKE[name]();
 }
