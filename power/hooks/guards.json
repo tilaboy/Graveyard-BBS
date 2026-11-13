@@ -4,28 +4,28 @@
     {
       "name": "graveyard-packet-on-spawn",
       "description": "Inject this caller's current QWK packet as starting context.",
-      "trigger": "AgentSpawn",
-      "action": { "type": "command", "command": "npx -y graveyard hook spawn" }
+      "trigger": "SessionStart",
+      "action": { "type": "command", "command": "npx --no-install graveyard hook spawn" }
     },
     {
       "name": "graveyard-guard-status",
       "description": "Block bbs_set_status calls the status machine forbids (e.g. running -> done).",
       "trigger": "PreToolUse",
       "matcher": "@graveyard/bbs_set_status",
-      "action": { "type": "command", "command": "npx -y graveyard hook pre-tool" }
+      "action": { "type": "command", "command": "npx --no-install graveyard hook pre-tool" }
     },
     {
       "name": "graveyard-guard-writes",
       "description": "Block writes to paths mapped to a lock this caller does not hold, and any write before ACK.",
       "trigger": "PreToolUse",
       "matcher": "fs_write",
-      "action": { "type": "command", "command": "npx -y graveyard hook pre-tool" }
+      "action": { "type": "command", "command": "npx --no-install graveyard hook pre-tool" }
     },
     {
       "name": "graveyard-milestone-on-stop",
       "description": "Post a MILESTONE with git diff --stat and heartbeat held locks.",
       "trigger": "Stop",
-      "action": { "type": "command", "command": "npx -y graveyard hook stop" }
+      "action": { "type": "command", "command": "npx --no-install graveyard hook stop" }
     }
   ]
 }

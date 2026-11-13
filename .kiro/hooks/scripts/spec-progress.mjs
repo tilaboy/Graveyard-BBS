@@ -1,4 +1,4 @@
-// AgentSpawn hook: print unchecked tasks from every spec so the agent starts from the plan.
+// SessionStart hook: print unchecked tasks from every spec so the agent starts from the plan.
 import { readdirSync, readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 

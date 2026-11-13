@@ -4,7 +4,7 @@
     {
       "name": "spec-progress-on-spawn",
       "description": "Inject open spec tasks so every session starts from the plan, not from memory.",
-      "trigger": "AgentSpawn",
+      "trigger": "SessionStart",
       "action": { "type": "command", "command": "node .kiro/hooks/scripts/spec-progress.mjs" }
     },
     {
@@ -12,14 +12,14 @@
       "description": "Typecheck the package a file was written in. Warn only.",
       "trigger": "PostToolUse",
       "matcher": "fs_write",
-      "timeout_ms": 60000,
+      "timeout": 60,
       "action": { "type": "command", "command": "node .kiro/hooks/scripts/typecheck.mjs" }
     },
     {
       "name": "tests-green-before-stop",
       "description": "Run core tests at the end of a turn. If red, keep the agent working instead of stopping.",
       "trigger": "Stop",
-      "timeout_ms": 120000,
+      "timeout": 120,
       "action": { "type": "command", "command": "node .kiro/hooks/scripts/tests-gate.mjs" }
     },
     {
