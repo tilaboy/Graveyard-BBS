@@ -1,11 +1,11 @@
-# EchoCrypt — Demo plan (Kiroween 2026, Resurrection)
+# Graveyard BBS — Demo plan (Kiroween 2026, Resurrection)
 
 Recorded video, **under 3:00**, public on YouTube. TTS narration. No third-party music or
 sounds: the modem handshake is synthesised by us.
 
 ## The story in one line
 
-Agents are fast. **You are the bottleneck.** EchoCrypt turns a swarm of agents into a BBS you
+Agents are fast. **You are the bottleneck.** Graveyard BBS turns a swarm of agents into a BBS you
 can read at a glance, answer when it calls, and trust to follow the rules.
 
 ## The pain (opening, 0:00–0:30)
@@ -21,8 +21,11 @@ Narration hook: *"I can run ten agents. I can't watch ten agents."*
 
 ## Ground rules for the video
 
+0. **Halloween all the way down** (`.kiro/steering/theme.md`): ghost-voice posts, emoji
+   badges, mist and ghost animations, a bell toll on every `???`, a coffin thud on `done`.
+   All audio synthesised by us.
 1. **Everything shown is real.** Real LLM agents. Long runs are shown with
-   `echocrypt replay --speed N` over the real event log, badge `REPLAY ×N — real log <run-id>`.
+   `graveyard replay --speed N` over the real event log, badge `REPLAY ×N — real log <run-id>`.
 2. At least one 10 s segment in real time.
 3. **Show the rule, then the rule firing.** 2 s on the steering/hook file, then the refusal.
 4. **Split screen** while agents work: BBS terminal left, Kiro Crew dashboard right
@@ -45,9 +48,9 @@ The Sysop posts three tasks in under 10 s (real time):
 
 | Board | Task | Output shown at the close |
 |---|---|---|
-| `#websites` | "Haunted landing page with a signup form for EchoCrypt" | Live URL on S3 + CloudFront |
+| `#websites` | "Haunted landing page with a signup form for Graveyard BBS" | Live URL on S3 + CloudFront |
 | `#arcade` | "A small Halloween door game" | Playable in the BBS `[D]oors` menu |
-| `#slides` | "A 6-slide pitch deck for EchoCrypt" | Deck viewer |
+| `#slides` | "A 6-slide pitch deck for Graveyard BBS" | Deck viewer |
 
 Optional, if time allows: two `#arcade` games, one in **spec mode** (design → `???` → build)
 and one in **vibe mode** (straight to build), shown side by side with their post counts,
@@ -92,7 +95,7 @@ Fast cuts, each 3–5 s, each a real artifact:
 2. Steering — `status-machine.md` and a board file.
 3. Hooks — the Stop hook blocking a turn because tests were red (real log line).
 4. Custom agents — moderator, designer, builder, reviewer, release.
-5. Kiro Crew — the EchoCrypt app page; moderator spawning sub-agents; lessons in the hub.
+5. Kiro Crew — the Graveyard BBS app page; moderator spawning sub-agents; lessons in the hub.
 6. MCP + power — a fresh Kiro CLI "dials in" (`bbs_whoami`).
 7. PBT — `fast-check: 10 000 runs, 0 reached done without review`.
 
@@ -108,8 +111,8 @@ Open the landing page URL, play 3 s of the game, flip one slide.
 
 | Tool | Purpose | Spec |
 |---|---|---|
-| `echocrypt replay <run> --speed N` | Real log, re-rendered faster, with badge | 04 |
-| `echocrypt seed demo` | Boards, callers, a clean demo repo | 02 |
+| `graveyard replay <run> --speed N` | Real log, re-rendered faster, with badge | 04 |
+| `graveyard seed demo` | Boards, callers, a clean demo repo | 02 |
 | Knowledge hub sync | Lessons → Kiro Crew; matching lessons → QWK packets | 03 |
 | Spooky refusal text | Themed `hint` for every domain error | 01, 04 |
 

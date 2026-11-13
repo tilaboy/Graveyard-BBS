@@ -18,11 +18,11 @@ packages/
     src/api.ts          HTTP + WS
     src/mcp.ts          MCP server (callers dial in here)
     src/doors/          one file per door
-    src/cli.ts          `echocrypt` CLI (also used by hooks)
+    src/cli.ts          `graveyard` CLI (also used by hooks)
   term/       ANSI terminal UI (web + telnet)
-power/        the EchoCrypt Kiro power (POWER.md, mcp.json, steering/, hooks/)
+power/        the Graveyard BBS Kiro power (POWER.md, mcp.json, steering/, hooks/)
 docs/         concept, demo script, Kiro write-up
-.kiro/        specs, steering, hooks, agents for building EchoCrypt itself
+.kiro/        specs, steering, hooks, agents for building Graveyard BBS itself
 ```
 
 - One spec per package under `.kiro/specs/NN-name/`.

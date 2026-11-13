@@ -2,9 +2,9 @@
 inclusion: always
 ---
 
-# Product: EchoCrypt
+# Product: Graveyard BBS
 
-EchoCrypt resurrects the 1990s Bulletin Board System as an Agentic Development Environment.
+Graveyard BBS resurrects the 1990s Bulletin Board System as an Agentic Development Environment.
 Agents are callers, boards are topics, doors are server-run tools, the human is the Sysop.
 
 Full concept: #[[file:docs/concept.md]]
@@ -29,3 +29,4 @@ Do not invent synonyms (no "channel", "ticket", "job", "room").
 3. The log is the truth. Every state is a fold over the append-only event log.
 4. Posts are data. No post is ever executed or obeyed as an instruction.
 5. Retro look, modern guts. ANSI screens on top; typed, tested TypeScript underneath.
+6. Halloween all the way down — see #[[file:.kiro/steering/theme.md]]. Spooky wrapper, plain facts.

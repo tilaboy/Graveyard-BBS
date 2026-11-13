@@ -5,7 +5,7 @@ import { join } from "node:path";
 const specsDir = ".kiro/specs";
 if (!existsSync(specsDir)) process.exit(0);
 
-const lines = ["# EchoCrypt open spec tasks"];
+const lines = ["# Graveyard BBS open spec tasks"];
 for (const spec of readdirSync(specsDir).sort()) {
   const file = join(specsDir, spec, "tasks.md");
   if (!existsSync(file)) continue;

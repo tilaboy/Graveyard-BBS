@@ -23,5 +23,5 @@ inclusion: always
 
 ## Worktrees
 
-Every stage task gets its own git worktree and branch `ec/<thread-id>`.
+Every stage task gets its own git worktree and branch `gy/<thread-id>`.
 Only `git_merge` (holding `merge`) brings it back to the main branch.

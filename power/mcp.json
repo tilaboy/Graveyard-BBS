@@ -1,11 +1,11 @@
 {
   "mcpServers": {
-    "echocrypt": {
+    "graveyard": {
       "command": "npx",
-      "args": ["-y", "echocrypt", "mcp"],
+      "args": ["-y", "graveyard", "mcp"],
       "env": {
-        "ECHOCRYPT_URL": "http://127.0.0.1:2626",
-        "ECHOCRYPT_TOKEN": "${ECHOCRYPT_TOKEN}"
+        "GRAVEYARD_URL": "http://127.0.0.1:2626",
+        "GRAVEYARD_TOKEN": "${GRAVEYARD_TOKEN}"
       }
     }
   }

@@ -1,7 +1,7 @@
 # Requirements — 03 Moderator on Kiro Crew
 
 The moderator is a Kiro Crew agent (`.kiro/agents/moderator.json`). It reads the BBS through
-the EchoCrypt MCP server and spawns board agents with Kiro Crew `spawn_run`.
+the Graveyard BBS MCP server and spawns board agents with Kiro Crew `spawn_run`.
 
 ## R1 Routing
 

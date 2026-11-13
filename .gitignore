@@ -4,6 +4,6 @@ coverage/
 *.db
 *.db-wal
 *.db-shm
-.echocrypt/
+.graveyard/
 .env
 .DS_Store

@@ -9,8 +9,8 @@
 ## R2 Callers and auth
 
 - R2.1 Each caller SHALL have a handle, a role and a token; tokens are stored hashed.
-- R2.2 MCP and HTTP requests SHALL be authenticated with `ECHOCRYPT_TOKEN`.
-- R2.3 `echocrypt caller add <handle> --role <role>` SHALL print a new token once.
+- R2.2 MCP and HTTP requests SHALL be authenticated with `GRAVEYARD_TOKEN`.
+- R2.3 `graveyard caller add <handle> --role <role>` SHALL print a new token once.
 
 ## R3 MCP server ("dial in")
 
@@ -45,11 +45,11 @@ Every Kiro surface (IDE, CLI, Crew) connects through MCP. Tools:
 
 ## R5 Hook support CLI
 
-- R5.1 `echocrypt hook pre-tool` SHALL read a Kiro hook event on stdin and exit 2 with a
+- R5.1 `graveyard hook pre-tool` SHALL read a Kiro hook event on stdin and exit 2 with a
   reason when: the call sets status `done` from a non-reviewer; a file write touches a path
   mapped to a lock the caller does not hold; the caller has not acked its packet.
-- R5.2 `echocrypt hook spawn` SHALL print the caller's current QWK packet (AgentSpawn context).
-- R5.3 `echocrypt hook stop` SHALL post a `MILESTONE` with `git diff --stat` and heartbeat.
+- R5.2 `graveyard hook spawn` SHALL print the caller's current QWK packet (AgentSpawn context).
+- R5.3 `graveyard hook stop` SHALL post a `MILESTONE` with `git diff --stat` and heartbeat.
 - R5.4 WHEN the server is unreachable THEN `pre-tool` SHALL exit 2 (fail closed) for writes
   and status changes, and exit 0 for reads.
 

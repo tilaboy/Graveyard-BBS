@@ -1,5 +1,5 @@
 // Stop hook: run core tests. If they fail, return a block decision so the agent keeps going.
-// This is EchoCrypt's own rule applied to building EchoCrypt: no "done" while tests are red.
+// This is Graveyard BBS's own rule applied to building Graveyard BBS: no "done" while tests are red.
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 

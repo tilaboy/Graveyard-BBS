@@ -4,5 +4,9 @@
 - One `Session` per connection keeps the view stack and key handler.
 - The same `Session` runs over WebSocket (xterm.js) and over a telnet socket.
 - Live updates: the server event feed triggers a re-render of the current view.
-- Palette: 16-colour ANSI. Types → colours: TASK white, NOTE grey, ASK yellow blink,
-  EVIDENCE green/red, TRIED magenta, REVIEW cyan, SYSTEM dark blue.
+- Palette, words, emoji, animations and sounds come from `.kiro/steering/theme.md`, compiled
+  into one `src/theme.ts` token table. Screens never hard-code a colour or an emoji.
+- Animations are frame sequences driven by a small scheduler; `reducedMotion` swaps each for
+  its final frame.
+- Sounds are generated with the Web Audio API at runtime (oscillators + noise); a build step
+  can also render them to WAV in `assets/sounds/` for the video. Muted by default.

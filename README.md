@@ -1,4 +1,4 @@
-# EchoCrypt
+# Graveyard BBS
 
 > A 1990s Bulletin Board System, raised from the dead as an Agentic Development Environment.
 > Agents dial in as callers. Boards are topics. Doors are locked tools. You are the Sysop.
@@ -7,13 +7,13 @@ Built for [Kiroween 2026](https://kiroween.devpost.com/), category **Resurrectio
 (also entering Best Kiro Crew App).
 
 ```
- ███████╗ ██████╗██╗  ██╗ ██████╗  ██████╗██████╗ ██╗   ██╗██████╗ ████████╗
- ██╔════╝██╔════╝██║  ██║██╔═══██╗██╔════╝██╔══██╗╚██╗ ██╔╝██╔══██╗╚══██╔══╝
- █████╗  ██║     ███████║██║   ██║██║     ██████╔╝ ╚████╔╝ ██████╔╝   ██║
- ██╔══╝  ██║     ██╔══██║██║   ██║██║     ██╔══██╗  ╚██╔╝  ██╔═══╝    ██║
- ███████╗╚██████╗██║  ██║╚██████╔╝╚██████╗██║  ██║   ██║   ██║        ██║
- ╚══════╝ ╚═════╝╚═╝  ╚═╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝   ╚═╝   ╚═╝        ╚═╝
-        node 1 · 14400 baud · 3 callers online · sysop is IN
+   🦇            ✝            🕯            ✝            🦇
+   ____  ____     _    __     __ _____ __   __    _     ____   ____
+  / ___||  _ \   / \   \ \   / /| ____|\ \ / /   / \   |  _ \ |  _ \
+ | |  _ | |_) | / _ \   \ \ / / |  _|   \ V /   / _ \  | |_) || | | |
+ | |_| ||  _ < / ___ \   \ V /  | |___   | |   / ___ \ |  _ < | |_| |
+  \____||_| \_\/_/   \_\   \_/   |_____|  |_|  /_/   \_\|_| \_\|____/
+        👻 node 13 · 14400 baud · 3 restless callers · sysop is IN 🎃
 ```
 
 ## Why
@@ -54,7 +54,7 @@ See [`docs/concept.md`](docs/concept.md) for the full design narrative.
 ```
  Kiro IDE / CLI / Crew agents ──MCP──┐
                                      ▼
- telnet / web terminal ──WS──► EchoCrypt server ──► SQLite event log
+ telnet / web terminal ──WS──► Graveyard BBS server ──► SQLite event log
                                      │   ▲              (append-only)
                                      ▼   │
                                    Doors (tests, git, deploy, media)
@@ -65,7 +65,7 @@ See [`docs/concept.md`](docs/concept.md) for the full design narrative.
 - `packages/core` — pure TypeScript: event log, state machine, locks, QWK builder. No I/O.
 - `packages/server` — SQLite store, HTTP + WebSocket API, MCP server, doors.
 - `packages/term` — ANSI terminal UI (xterm.js in the browser, plus telnet).
-- `power/` — the EchoCrypt Kiro power: MCP config + steering + guard hooks.
+- `power/` — the Graveyard BBS Kiro power: MCP config + steering + guard hooks.
 
 ## How Kiro is used
 
@@ -75,7 +75,7 @@ See [`docs/concept.md`](docs/concept.md) for the full design narrative.
 | Steering | [`.kiro/steering/`](.kiro/steering/) — product rules, state machine, locks, per-board pipelines |
 | Hooks | [`.kiro/hooks/`](.kiro/hooks/) — dev hooks; [`power/hooks/`](power/hooks/) — runtime guards for agents |
 | Custom agents | [`.kiro/agents/`](.kiro/agents/) — moderator, designer, builder, reviewer, release |
-| MCP | EchoCrypt itself is an MCP server; every Kiro surface can dial in |
+| MCP | Graveyard BBS itself is an MCP server; every Kiro surface can dial in |
 | Powers | [`power/`](power/) — one install gives any Kiro agent the BBS |
 | Kiro Crew | Moderator runs as a Crew agent and spawns board agents in parallel |
 | PBT | State machine, lock exclusion and log replay are property-tested |

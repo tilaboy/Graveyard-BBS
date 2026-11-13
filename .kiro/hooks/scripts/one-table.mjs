@@ -17,7 +17,7 @@ const definesTable = /\bTRANSITIONS\s*=\s*\[/.test(text) || /from:\s*["']running
 if (definesTable && !allowed) {
   console.error(
     "Blocked: the status transition table lives only in packages/core/src/status.ts. " +
-    "Import TRANSITIONS from @echocrypt/core instead of redefining it.",
+    "Import TRANSITIONS from @graveyard/core instead of redefining it.",
   );
   process.exit(2);
 }

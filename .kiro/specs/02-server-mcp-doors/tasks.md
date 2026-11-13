@@ -2,7 +2,7 @@
 
 - [ ] 1. `packages/server` scaffold, SQLite store, append + fold on boot (R1)
 - [ ] 2. `commands.ts` single entry point wrapping core `decide`
-- [ ] 3. Callers, hashed tokens, `echocrypt caller add` (R2)
+- [ ] 3. Callers, hashed tokens, `graveyard caller add` (R2)
 - [ ] 4. HTTP + WS API, event feed (R6.1)
 - [ ] 5. MCP server with all `bbs_*` tools, descriptions generated from core (R3)
   - [ ] 5.1 Untrusted-post wrapping + control-char stripping, with tests (R3.3)

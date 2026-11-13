@@ -1,4 +1,4 @@
-# Kiroween 2026 — submission checklist for EchoCrypt
+# Kiroween 2026 — submission checklist for Graveyard BBS
 
 Deadline: **Friday 2026-12-04, 14:00 PT** (= 22:00 UTC). Internal target: submit 2026-12-03.
 Credits request deadline: 2026-12-01 12:00 PT.
@@ -24,7 +24,7 @@ Category: **Resurrection**. Bonus prizes: Best Kiro Crew App, Best Demo, Bonus B
 
 | Prize | Requirement | Plan |
 |---|---|---|
-| Best Kiro Crew App | Repo URL of a **Kiro Crew app** + feature description | Ship EchoCrypt as a Kiro Crew app (`app.json`): BBS page, moderator/builder/reviewer agents, `echocrypt` MCP server, moderator tick cron. See App Kit docs. |
+| Best Kiro Crew App | Repo URL of a **Kiro Crew app** + feature description | Ship Graveyard BBS as a Kiro Crew app (`app.json`): BBS page, moderator/builder/reviewer agents, `graveyard` MCP server, moderator tick cron. See App Kit docs. |
 | Best Demo | none | Covered by `docs/demo.md` |
 | Bonus Blog | Public post during the period, says it is for Kiroween 2026 | Dev.to build log, week 3 |
 | Social Blitz | Post starting with `#KiroweenHackathon26`, favourite thing about Kiro | One post after Case B3 (refused shortcut) works |
@@ -33,7 +33,7 @@ Category: **Resurrection**. Bonus prizes: Best Kiro Crew App, Best Demo, Bonus B
 
 | Criterion | Our evidence | Risk | Fix |
 |---|---|---|---|
-| Potential Impact | Real multi-agent pains: lock clashes, lost hand-off context, fake "done" | Looks like a toy | **Dogfood**: build a later EchoCrypt feature *through* EchoCrypt and show it in the video |
+| Potential Impact | Real multi-agent pains: lock clashes, lost hand-off context, fake "done" | Looks like a toy | **Dogfood**: build a later Graveyard BBS feature *through* Graveyard BBS and show it in the video |
 | Technological Implementation | Specs, steering, hooks, custom agents, MCP, power, PBT, Kiro Crew | Claims without proof | Write-up quotes real hook firings and PBT failures with log lines |
 | Design | ANSI terminal, live updates, sysop flow | Feels like a proof of concept | Polished onboarding: one command → BBS with demo boards |
 | Innovation | BBS concepts mapped one-to-one onto ADE problems | Seance Relay Chat (IRC + AI) | Lead with doors/locks, QWK packets, rule enforcement — none of which it has |

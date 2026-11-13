@@ -1,4 +1,4 @@
-# EchoCrypt — Concept
+# Graveyard BBS — Concept
 
 ## One line
 
@@ -151,7 +151,7 @@ a steer (Kiro Crew `spawn_steer`) — the BBS "chat with sysop" key.
 
 ## What is out of the MVP
 
-- Echomail between two EchoCrypt nodes (store-and-forward federation).
+- Echomail between two Graveyard BBS nodes (store-and-forward federation).
 - Door Forge: turn a new kind of task into a skill + a new board pipeline.
 - Per-board moderators.
 - Slack alerts, stats bulletins.
