@@ -48,7 +48,7 @@ Every Kiro surface (IDE, CLI, Crew) connects through MCP. Tools:
 - R5.1 `graveyard hook pre-tool` SHALL read a Kiro hook event on stdin and exit 2 with a
   reason when: the call sets status `done` from a non-reviewer; a file write touches a path
   mapped to a lock the caller does not hold; the caller has not acked its packet.
-- R5.2 `graveyard hook spawn` SHALL print the caller's current QWK packet (AgentSpawn context).
+- R5.2 `graveyard hook spawn` SHALL print the caller's current QWK packet (SessionStart context).
 - R5.3 `graveyard hook stop` SHALL post a `MILESTONE` with `git diff --stat` and heartbeat.
 - R5.4 WHEN the server is unreachable THEN `pre-tool` SHALL exit 2 (fail closed) for writes
   and status changes, and exit 0 for reads.

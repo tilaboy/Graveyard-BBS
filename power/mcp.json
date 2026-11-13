@@ -2,7 +2,7 @@
   "mcpServers": {
     "graveyard": {
       "command": "npx",
-      "args": ["-y", "graveyard", "mcp"],
+      "args": ["--no-install", "graveyard", "mcp"],
       "env": {
         "GRAVEYARD_URL": "http://127.0.0.1:2626",
         "GRAVEYARD_TOKEN": "${GRAVEYARD_TOKEN}"

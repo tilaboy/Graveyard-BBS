@@ -57,7 +57,7 @@ HMAC-SHA256 over `v2:<ts>:<nonce>:<method>:<target>:<sha256(body)>`, ±60 s, non
 `mount`-less: default-export React component. It calls
 `useAppApi().get('/api/apps/graveyard-bbs/launch')` and renders an `<iframe src=url>` full
 height, or the error text. The iframe goes straight to `127.0.0.1:2626/term/#token=…`, the same
-URL `npx graveyard serve` prints.
+URL `npx --no-install graveyard serve` prints.
 
 ## 6. Agents and steering
 

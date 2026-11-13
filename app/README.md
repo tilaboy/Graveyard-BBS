@@ -1,7 +1,7 @@
 # Graveyard BBS — Kiro Crew app
 
 Adds a **Graveyard BBS** page, the five board agents, the `graveyard` MCP server and a paused
-`moderator-step` schedule to Kiro Crew. `npx graveyard serve` still works without it.
+`moderator-step` schedule to Kiro Crew. `npx --no-install graveyard serve` still works without it.
 
 This is third-party code that runs with Kiro Crew's privileges: enabling needs your trust grant.
 
@@ -9,7 +9,7 @@ This is third-party code that runs with Kiro Crew's privileges: enabling needs y
 
 ```bash
 echo "$PWD" > ~/.graveyard-bbs-home          # run inside your Graveyard-BBS checkout (npm ci done)
-export GRAVEYARD_TOKEN=$(npx graveyard caller add moderator --role moderator)
+export GRAVEYARD_TOKEN=$(npx --no-install graveyard caller add moderator --role moderator)
 kirocrew app install "$PWD/app"
 kirocrew app enable graveyard-bbs             # trust prompt: answer yes, or enable from the App Store
 ```

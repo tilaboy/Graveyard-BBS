@@ -116,7 +116,7 @@ the packet view opened.
 `app/` holds the Kiro Crew app: manifest, the BBS page (the same `packages/term` build in live
 mode), agents from `.kiro/agents/`, the `graveyard` MCP server, and the moderator loop.
 The exact `app.json` fields come from the Kiro Crew App Kit and are specified in a new
-**spec 05**. `npx graveyard serve` stays the standalone path (R4.2).
+**spec 05**. `npx --no-install graveyard serve` stays the standalone path (R4.2).
 
 ## 10. Fit check: current setup vs this demo
 

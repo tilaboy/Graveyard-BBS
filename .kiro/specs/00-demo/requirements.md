@@ -66,7 +66,7 @@ so I am not the bottleneck.
 
 - R4.1 Graveyard BBS SHALL install with `kirocrew app install <repo>/app` and add a BBS page,
   the board agents, the `graveyard` MCP server and the moderator loop.
-- R4.2 The app SHALL also run standalone (`npx graveyard serve`).
+- R4.2 The app SHALL also run standalone (`npx --no-install graveyard serve`).
 
 ## R5 Judge access ("URL to your working app")
 

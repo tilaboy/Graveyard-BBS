@@ -44,14 +44,29 @@ catch it, then reverted:
 **A real bug PBT found:** moving a task back to `pending` left its entries in lock queues
 (a lock leak). Unit tests had not covered it; fixed with a regression test.
 
-## Hooks — observed firing
+## 2026-11-13 — Hooks proven in real Kiro CLI runs
 
-_To fill: paste the real log line for each hook in `.kiro/hooks/dev.json` and
-`power/hooks/guards.json` once seen firing inside a Kiro session._
+A Kiro Crew worker drove `kiro-cli chat --v3 --no-interactive` with tiny prompts built to trip
+each hook. Evidence is in `docs/hooks-evidence.md`: CLI output, `kiro.log` `hooks.*` lines and
+the session's `ContextualHookInvoked` records.
 
-| Hook | Seen firing? | Evidence |
+| Hook | Fired? | Evidence (verbatim) |
 |---|---|---|
-| `spec-progress-on-spawn` | not yet | |
-| `typecheck-after-write` | not yet | |
-| `tests-green-before-stop` | not yet | |
-| `single-transition-table` | not yet | |
+| `single-transition-table` (PreToolUse) | yes, blocked | `Blocked: the status transition table lives only in packages/core/src/status.ts.` |
+| `tests-green-before-stop` (Stop) | yes, kept the agent working | `Core tests are failing. Fix the code (never weaken tests) before stopping.` |
+| `spec-progress-on-spawn` (SessionStart) | yes, after fix | `# Graveyard BBS open spec tasks` / `## 00-demo (6 done, 22 open)` |
+| `typecheck-after-write` (PostToolUse) | runs, but its output never reaches the agent in 3.3 | `ContextualHookInvoked … "typecheck-after-write" … "completed"` |
+| `graveyard-guard-status` (PreToolUse MCP) | yes, blocked | `☠  ACCESS DENIED · ILLEGAL_TRANSITION  pending → done` |
+| `graveyard-guard-writes` (PreToolUse) | yes, blocked | `☠  ACCESS DENIED · NO_ACK  arcade-bat-dodge: ACK qwk-arcade-bat-dodge-5 before writing` |
+| `graveyard-packet-on-spawn` (SessionStart) | yes | `[Session Start Hook Output]` / `## goal` |
+| `graveyard-milestone-on-stop` (Stop) | yes | MILESTONE `"turn ended, no file changes"` posted to the BBS |
+
+What running them for real taught us (none of it shows up when you run a script by hand):
+
+1. `--no-interactive` picks the v2 engine, which ignores `.kiro/hooks/*.json`. `--v3` is needed.
+2. Kiro CLI 3.3 rejects `AgentSpawn` in standalone hook files (`Hook trigger is not a
+   recognized name`); `SessionStart` works.
+3. The field is `timeout` (seconds), not `timeout_ms`; the 120 s test gate was being cut at 60 s.
+4. `npx -y graveyard` would have downloaded an unrelated npm package named `graveyard`.
+   All calls now use `npx --no-install`, so the hook fails closed without a local install.
+

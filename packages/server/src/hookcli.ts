@@ -82,7 +82,7 @@ const PacketReply = z.object({
   value: z.object({ text: z.string() }),
 });
 
-/** R5.2: print the caller's QWK packet as AgentSpawn context. Never blocks the agent. */
+/** R5.2: print the caller's QWK packet as SessionStart context. Never blocks the agent. */
 export async function spawn(
   env: HookEnv,
   post: Post = poster(env),

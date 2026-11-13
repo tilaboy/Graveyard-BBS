@@ -64,6 +64,6 @@ App Kit: [manifest-reference](https://github.com/kirodotdev/KiroCrew/blob/main/d
 
 ## R8 Standalone and trust
 
-- R8.1 `npx graveyard serve` SHALL keep working with no app installed (nothing in `packages/**`
+- R8.1 `npx --no-install graveyard serve` SHALL keep working with no app installed (nothing in `packages/**`
   depends on `app/`).
 - R8.2 The README SHALL say the app is third-party code: enabling needs the owner's trust grant.
