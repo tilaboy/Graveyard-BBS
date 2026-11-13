@@ -16,6 +16,17 @@ Built for [Kiroween 2026](https://kiroween.devpost.com/), category **Resurrectio
         👻 node 13 · 14400 baud · 3 restless callers · sysop is IN 🎃
 ```
 
+## Quick start
+
+1. `git clone https://github.com/<owner>/Graveyard-BBS.git && cd Graveyard-BBS` (Node 22+)
+2. `npm ci`
+3. `node packages/server/bin/graveyard.mjs serve` (add `seed demo` first for sample threads)
+4. Open the `Web terminal:` URL it prints (`http://127.0.0.1:2626/term/#token=…`). Sound starts muted; press `M`.
+5. Optional, Kiro Crew app: `echo "$PWD" > ~/.graveyard-bbs-home`, then `kirocrew app install "$PWD/app"` and `kirocrew app enable graveyard-bbs` (see [`app/README.md`](app/README.md)).
+
+Run `node packages/server/bin/graveyard.mjs …` or `npx --no-install graveyard …` from the checkout. Never
+run bare `npx graveyard`: that npm name belongs to another package.
+
 ## Why
 
 Agents are fast. **The human is the bottleneck.** One developer can start ten agents but

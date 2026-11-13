@@ -34,12 +34,12 @@ Ordered by week. Each task names the requirement it serves and the spec that doe
 
 ## Week 4 (Nov 30–Dec 3) — video and submit
 
-- [ ] 15. `scripts/sounds.ts` renders the synthesised effects to WAV (R1.5)
-- [ ] 16. `video/narration.md` ≤ 420 words; Polly MP3 per scene (R1.6)
-- [ ] 17. Opening "Why" scene: the four pains, before any product screen (R1.2)
+- [x] 15. `scripts/sounds.ts` renders the synthesised effects to WAV (R1.5)
+- [x] 16. `video/narration.md` ≤ 420 words; Polly MP3 per scene (R1.6)
+- [x] 17. Opening "Why" scene: the four pains, before any product screen (R1.2)
 - [ ] 18. "Built with Kiro" montage from real artifacts (R1.7)
 - [ ] 19. Compose split screen + captions + REPLAY badge with ffmpeg; check < 3:00 (R1.1, R1.3)
 - [ ] 20. Upload to YouTube (public); Social Blitz post
-- [ ] 21. README: ≤ 5-step install; judge site link (R5.3)
+- [x] 21. README: ≤ 5-step install; judge site link (R5.3)
 - [ ] 22. Finish `docs/kiro-usage.md` (R6.2)
 - [ ] 23. Devpost form: category, bonus prizes, links, judge notes; submit by Dec 3 (R7.2)
