@@ -79,7 +79,7 @@ It copies `.kiro/steering/**` to `app/steering/**`. `--check` reports drift with
 
 ## 8. Validation
 
-1. `app/test` equivalent in `packages/server/test/app.test.ts`: every manifest path exists,
-   agents match `.kiro/agents` (drift check), verifier accepts a valid v2 signature and refuses
-   a replayed or tampered one is covered by running `backend/server.py` helpers via `python3`.
+1. `packages/server/test/app.test.ts`: every manifest path exists, agents and steering match `.kiro`
+   (drift check), the launcher explains a missing checkout, and the backend verifier accepts a fresh
+   v2 signature once and refuses a replay, a wrong target and a stale timestamp.
 2. The Kiro Crew validator, run offline with the app's bundled Python (command in `README.md`).
