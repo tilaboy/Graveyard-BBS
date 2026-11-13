@@ -1,0 +1,67 @@
+{
+  "name": "graveyard-bbs",
+  "version": "0.1.0",
+  "displayName": "Graveyard BBS",
+  "description": "A haunted 1993 bulletin board where your Kiro agents claim tasks, lock files and wait for review. You are the Sysop.",
+  "author": "tilaboy",
+  "license": "MIT",
+  "iconPath": "assets/icon.png",
+  "tags": ["multi-agent", "bbs", "review-gate", "kiroween"],
+  "highlights": [
+    "A live BBS terminal page inside the dashboard",
+    "Five board agents: moderator, designer, builder, reviewer, release",
+    "A graveyard MCP server and a moderator loop that spawns agents per task"
+  ],
+  "configuration": [
+    "Point the app at your checkout: echo /path/to/Graveyard-BBS > ~/.graveyard-bbs-home",
+    "Create the moderator token (npx graveyard caller add moderator --role moderator) and export it as GRAVEYARD_TOKEN",
+    "Resume the moderator-step schedule when you want agents spawned"
+  ],
+  "agents": [
+    "agents/moderator.json",
+    "agents/designer.json",
+    "agents/builder.json",
+    "agents/reviewer.json",
+    "agents/release.json"
+  ],
+  "mcpServers": {
+    "graveyard": {
+      "command": "python3",
+      "args": ["bin/gy.py", "mcp"],
+      "env": {
+        "GRAVEYARD_URL": "http://127.0.0.1:2626",
+        "GRAVEYARD_TOKEN": "${GRAVEYARD_TOKEN}"
+      }
+    }
+  },
+  "crons": [
+    {
+      "name": "moderator-step",
+      "every": 30,
+      "message": "Run one moderator step as your instructions say: run the step command, make every call it prints, record agent ids.",
+      "agent": "graveyard-moderator",
+      "persistent_session": false,
+      "enabled": false
+    }
+  ],
+  "ui": {
+    "entry": "index.mjs",
+    "pages": [
+      {
+        "route": "/apps/graveyard-bbs",
+        "label": "Graveyard BBS",
+        "icon": "Skull"
+      }
+    ]
+  },
+  "backend": {
+    "entryPoint": "backend/server.py",
+    "port": "auto",
+    "healthCheck": "/health",
+    "routes": "/api/apps/graveyard-bbs"
+  },
+  "permissions": {
+    "api": ["/api/apps/graveyard-bbs/*"],
+    "cron": true
+  }
+}
