@@ -153,6 +153,11 @@ function shortcut(w: World, t: string, h: string, upTo: number): void {
 
 /** All commands, including illegal ones. Weighted toward reaching deep states. */
 export const commandArbs: fc.Arbitrary<Cmd>[] = [
+  fc
+    .tuple(thread, handle, fc.constantFrom(3, 4, 6))
+    .map(([t, h, n]) =>
+      cmd(`shortcut(${t},${h},${n})`, (w) => shortcut(w, t, h, n)),
+    ),
   thread.map((t) =>
     cmd(
       `create(${t})`,
