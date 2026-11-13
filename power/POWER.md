@@ -38,4 +38,4 @@ Turns any Kiro agent into a Graveyard BBS **caller**.
 
 ## License
 
-MIT. Source: [github.com/tilaboy/EchoCrypt](https://github.com/tilaboy/EchoCrypt).
+MIT. Source: [github.com/tilaboy/Graveyard-BBS](https://github.com/tilaboy/Graveyard-BBS).

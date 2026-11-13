@@ -10,7 +10,7 @@ Category: **Resurrection**. Bonus prizes: Best Kiro Crew App, Best Demo, Bonus B
 | # | Requirement | Status | Action |
 |---|---|---|---|
 | 1 | Project started on/after 2026-10-30 | OK — first commit 2026-11-07 | — |
-| 2 | Public GitHub repo | OK — github.com/tilaboy/EchoCrypt is public | Push local commits |
+| 2 | Public GitHub repo | OK — github.com/tilaboy/Graveyard-BBS is public | Push local commits |
 | 3 | OSI license detected in the About box | Pending — MIT `LICENSE` is local only | Push, then confirm GitHub shows "MIT" |
 | 4 | `/.kiro` at repo root, not in `.gitignore` | OK locally | Keep a CI check that `.kiro/` is tracked |
 | 5 | All source, assets and run instructions | Pending | README "Quick start" that works on a clean machine |
