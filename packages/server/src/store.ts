@@ -11,6 +11,14 @@ export interface CallerRow {
   role: Role;
 }
 
+export interface LessonRow {
+  text: string;
+  tags: string[];
+  project: string;
+  board: string;
+  thread: string;
+}
+
 export interface FileRow {
   sha256: string;
   thread_id: string;
@@ -18,6 +26,13 @@ export interface FileRow {
   path: string;
 }
 
+const LessonRowSchema = z.object({
+  text: z.string(),
+  tags: z.array(z.string()),
+  project: z.string(),
+  board: z.string(),
+  thread: z.string(),
+});
 const RoleSchema = z.enum(ROLES);
 const CallerRowSchema = z.object({ handle: z.string(), role: RoleSchema });
 
@@ -32,6 +47,8 @@ export class Store {
       CREATE TABLE IF NOT EXISTS events (seq INTEGER PRIMARY KEY, id TEXT UNIQUE, at INTEGER,
         thread_id TEXT, caller TEXT, type TEXT, body TEXT);
       CREATE TABLE IF NOT EXISTS callers (handle TEXT PRIMARY KEY, role TEXT, token_hash TEXT);
+      CREATE TABLE IF NOT EXISTS lessons (id INTEGER PRIMARY KEY AUTOINCREMENT, text TEXT, tags TEXT,
+        project TEXT, board TEXT, thread TEXT, UNIQUE (project, thread, text));
       CREATE TABLE IF NOT EXISTS files (sha256 TEXT PRIMARY KEY, thread_id TEXT, name TEXT, path TEXT);
     `);
   }
@@ -89,6 +106,32 @@ export class Store {
       .prepare("SELECT handle, role FROM callers ORDER BY handle")
       .all()
       .map((r) => CallerRowSchema.parse(r));
+  }
+
+  /** Spec 03 R9.2: the knowledge hub. Same (project, thread, text) is stored once. */
+  addLesson(l: LessonRow): boolean {
+    return (
+      this.db
+        .prepare(
+          "INSERT OR IGNORE INTO lessons (text, tags, project, board, thread) VALUES (?, ?, ?, ?, ?)",
+        )
+        .run(l.text, JSON.stringify(l.tags), l.project, l.board, l.thread)
+        .changes > 0
+    );
+  }
+
+  /** Oldest first; `board` filters, `limit` keeps the newest N. */
+  lessons(board?: string, limit = 200): LessonRow[] {
+    const rows = this.db
+      .prepare(
+        `SELECT text, tags, project, board, thread FROM lessons ${board ? "WHERE board = ?" : ""} ORDER BY id DESC LIMIT ?`,
+      )
+      .all(...(board ? [board, limit] : [limit])) as Record<string, unknown>[];
+    return rows
+      .reverse()
+      .map((r) =>
+        LessonRowSchema.parse({ ...r, tags: JSON.parse(String(r["tags"])) }),
+      );
   }
 
   addFile(f: FileRow): void {
