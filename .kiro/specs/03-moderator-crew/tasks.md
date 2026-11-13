@@ -13,3 +13,4 @@
 - [ ] 11. Knowledge hub: distil lessons on thread close, store in Kiro Crew with source (R9.1, R9.2)
 - [ ] 12. Lesson search on packet build (R9.3)
 - [ ] 13. Refusal flow for "skip review" requests (R10)
+- [ ] 14. Write wall-clock timestamps for each spawn/steer into the log, for dashboard alignment (spec 00 design §6)

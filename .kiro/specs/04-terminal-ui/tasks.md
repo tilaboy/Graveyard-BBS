@@ -20,3 +20,7 @@
 - [ ] 17. Synthesised sounds (Web Audio) + `[M]` mute, off by default (R5.3, R5.5)
 - [ ] 18. `???` bell toll + lantern flicker until answered (R5.4)
 - [ ] 19. Snapshot tests: every themed line still contains its plain fact (R5.1)
+- [ ] 20. `ReplaySource` beside `LiveSource`; same screens (spec 00 design §3)
+- [ ] 21. Replay controls: play/pause, 1×/5×/20×, scrub bar with markers, REPLAY badge
+- [ ] 22. Static judge-site build: replay player + bundles + outputs (spec 00 R5)
+- [ ] 23. `[X] force done` key on a thread (sends the Sysop request; shows the refusal)

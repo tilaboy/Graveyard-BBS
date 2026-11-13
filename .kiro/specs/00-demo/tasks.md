@@ -4,14 +4,14 @@ Ordered by week. Each task names the requirement it serves and the spec that doe
 
 ## Week 1 (Nov 13–15) — foundations
 
-- [ ] 1. Request the 4,000 free Kiro credits (R7.1)
+- [x] 1. Request the 4,000 free Kiro credits (R7.1) — approved
 - [ ] 2. Start `docs/kiro-usage.md` with dated entries; log every hook firing and PBT failure (R6.1)
 - [ ] 3. Verify each dev hook fires in a real Kiro session; paste the log line into the write-up (R6.2)
-- [ ] 4. Add the fit-check items to other specs (design §10):
-  - [ ] 4.1 Spec 02: `publish` door, S3 + CloudFront deploy, `graveyard export`, Sysop "force done" key
-  - [ ] 4.2 Spec 03: wall-clock timestamps for dashboard alignment
-  - [ ] 4.3 Spec 04: `ReplaySource`, scrub bar, judge-site build
-  - [ ] 4.4 `boards/websites.md`: designer asks the Sysop to choose a theme (B2)
+- [x] 4. Add the fit-check items to other specs (design §10):
+  - [x] 4.1 Spec 02: `publish` door, S3 + CloudFront deploy, `graveyard export`, Sysop "force done" key
+  - [x] 4.2 Spec 03: wall-clock timestamps for dashboard alignment
+  - [x] 4.3 Spec 04: `ReplaySource`, scrub bar, judge-site build
+  - [x] 4.4 `boards/websites.md`: designer asks the Sysop to choose a theme (B2)
   - [ ] 4.5 Write spec 05 "Kiro Crew app" from the App Kit docs (R4)
 
 ## Week 2 (Nov 16–22) — Case B on real code

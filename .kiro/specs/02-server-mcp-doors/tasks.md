@@ -17,3 +17,7 @@
       and fail CI if they drift
 - [ ] 14. Demo tools (see `docs/demo.md`): `seed demo` with a clean demo repo, `--lease` override;
       `chaos kill <caller>` and `rogue` scripted caller kept for tests only (not in the video)
+- [ ] 15. `publish` door for `#arcade` games and `#slides` decks (boards/arcade.md, boards/slides.md)
+- [ ] 16. `deploy` door target S3 + CloudFront (profile + bucket from env), URL in EVIDENCE (spec 00 R2.6)
+- [ ] 17. `graveyard export <run-id>`: run bundle JSON + artifacts, tokens/env/home paths stripped (spec 00 design §2)
+- [ ] 18. Sysop "force done" command that goes through the normal status rules and is refused (spec 00 R3.3)
