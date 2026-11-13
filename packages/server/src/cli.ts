@@ -4,6 +4,7 @@ import { parseArgs } from "node:util";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { ROLES, type Role } from "@graveyard/core";
+import { LiveSource } from "@graveyard/term";
 import { z } from "zod";
 import { startServer } from "./api.js";
 import { openService } from "./boot.js";
@@ -17,7 +18,9 @@ const env = {
   token: process.env["GRAVEYARD_TOKEN"],
 };
 const USAGE = `usage: graveyard <command>
-  serve [--port N] [--lease SECONDS]       start the BBS on 127.0.0.1
+  serve [--port N] [--lease SECONDS] [--telnet-port N]
+                                           start the BBS on 127.0.0.1 (web terminal at /term/, telnet 2323; 0 = no telnet)
+  replay <bundle> [--speed N]              play a recorded run in this terminal
   caller add <handle> --role <role>        print a new token once
   mcp                                      MCP stdio server (proxies to GRAVEYARD_URL)
   hook pre-tool|spawn|stop                 Kiro hook entry points (event JSON on stdin)
@@ -46,6 +49,15 @@ async function api(path: string, body: unknown): Promise<unknown> {
   return res.json();
 }
 
+/** The web and telnet terminals share one sysop caller; its token is replaced on each start. */
+function mintTermToken(store: ReturnType<typeof openService>["store"]): string {
+  try {
+    return store.addCaller("sysop-term", "sysop");
+  } catch {
+    return store.rotateCaller("sysop-term");
+  }
+}
+
 async function main(argv: string[]): Promise<number> {
   const [cmd, sub, ...rest] = argv;
   const { values, positionals } = parseArgs({
@@ -54,6 +66,8 @@ async function main(argv: string[]): Promise<number> {
     options: {
       port: { type: "string" },
       lease: { type: "string" },
+      speed: { type: "string" },
+      "telnet-port": { type: "string" },
       role: { type: "string" },
       repo: { type: "string" },
       out: { type: "string" },
@@ -69,12 +83,44 @@ async function main(argv: string[]): Promise<number> {
         ...lease,
         ...(values.port ? { port: z.coerce.number().parse(values.port) } : {}),
       });
+      const term = await import("@graveyard/term/node");
       const s = await startServer({
         svc,
         chaos: process.env["GRAVEYARD_CHAOS"] === "1",
+        termDir: await term.ensureClient(),
       });
+      // The terminal is the Gravekeeper's seat: one sysop caller, a fresh token on every start.
+      const token = mintTermToken(svc.store);
       console.log(`Graveyard BBS haunting ${s.url} (127.0.0.1 only)`);
+      console.log(`Web terminal: ${s.url}/term/#token=${token}`);
+      const telnetPort = z.coerce
+        .number()
+        .parse(values["telnet-port"] ?? "2323");
+      if (telnetPort > 0) {
+        const source = new LiveSource({ baseUrl: s.url, token });
+        source.start();
+        try {
+          const t = await term.startTelnet({ source, port: telnetPort });
+          console.log(`Telnet: telnet 127.0.0.1 ${t.port}`);
+        } catch (e) {
+          console.error(
+            `telnet not started: ${e instanceof Error ? e.message : String(e)}`,
+          );
+        }
+      }
       return new Promise<number>(() => undefined);
+    }
+    case "replay": {
+      if (!sub) return (console.error(USAGE), 1);
+      const { runReplayTerminal } = await import("@graveyard/term/node");
+      await runReplayTerminal(
+        resolve(sub),
+        z.coerce
+          .number()
+          .positive()
+          .parse(values.speed ?? "1"),
+      );
+      return 0;
     }
     case "caller": {
       const handle = positionals[1];

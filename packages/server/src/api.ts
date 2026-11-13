@@ -1,11 +1,13 @@
 import websocket from "@fastify/websocket";
 import Fastify, { type FastifyReply, type FastifyRequest } from "fastify";
+import { join } from "node:path";
 import { z } from "zod";
 import type { Event } from "@graveyard/core";
 import { toolFail, type Service } from "./commands.js";
 import { defaultDoors } from "./doors/index.js";
 import type { RegisteredDoor } from "./doors/types.js";
 import { checkPreTool, HookEventSchema, recordStop } from "./hooks.js";
+import { readStatic } from "./static.js";
 import * as sysop from "./sysop.js";
 import {
   buildTools,
@@ -23,6 +25,8 @@ export interface ServerOptions {
   port?: number;
   tickMs?: number;
   chaos?: boolean;
+  /** Folder with the built browser client; served at /term/. */
+  termDir?: string;
 }
 
 const send = (reply: FastifyReply, r: ToolResult) => reply.send(r);
@@ -53,6 +57,31 @@ export async function startServer(opts: ServerOptions) {
   });
 
   app.get("/api/health", async () => ({ ok: true }));
+
+  // Spec 04 R2.1: the browser terminal and the published games / decks. No secrets here: the page
+  // takes its token from the URL fragment and the feed still checks it.
+  const files =
+    (root: string, csp: boolean) =>
+    async (req: FastifyRequest, reply: FastifyReply) => {
+      const tail = z.object({ "*": z.string() }).parse(req.params)["*"];
+      const f = readStatic(root, tail);
+      if (!f) return reply.code(404).send({ ok: false });
+      reply
+        .header("x-content-type-options", "nosniff")
+        .header("cache-control", "no-store")
+        .type(f.type);
+      if (csp)
+        reply.header(
+          "content-security-policy",
+          "default-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'",
+        );
+      return reply.send(f.body);
+    };
+  if (opts.termDir) {
+    app.get("/term", async (_req, reply) => reply.redirect("/term/"));
+    app.get("/term/*", files(opts.termDir, true));
+  }
+  app.get("/published/*", files(join(svc.config.dataDir, "published"), false));
 
   app.addHook("preHandler", async (req, reply) => {
     if (
