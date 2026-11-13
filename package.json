@@ -9,7 +9,9 @@
     "node": ">=22"
   },
   "scripts": {
-    "lint": "eslint packages && prettier --check packages"
+    "lint": "eslint packages && prettier --check packages",
+    "sync-power": "tsx packages/server/src/sync-power.ts",
+    "check-power": "tsx packages/server/src/sync-power.ts --check"
   },
   "devDependencies": {
     "@types/node": "22.20.5",
