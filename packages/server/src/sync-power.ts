@@ -16,7 +16,8 @@ export function syncPower(root: string, check: boolean): string[] {
   for (const f of POWER_STEERING) {
     const from = join(root, ".kiro", "steering", f);
     const to = join(out, f);
-    const same = existsSync(to) && readFileSync(from, "utf8") === readFileSync(to, "utf8");
+    const same =
+      existsSync(to) && readFileSync(from, "utf8") === readFileSync(to, "utf8");
     if (same) continue;
     drift.push(f);
     if (!check) {
@@ -31,8 +32,12 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const check = process.argv.includes("--check");
   const drift = syncPower(process.cwd(), check);
   if (check && drift.length > 0) {
-    console.error(`power/steering has drifted from .kiro/steering: ${drift.join(", ")}. Run: npm run sync-power`);
+    console.error(
+      `power/steering has drifted from .kiro/steering: ${drift.join(", ")}. Run: npm run sync-power`,
+    );
     process.exit(1);
   }
-  console.log(drift.length ? `synced: ${drift.join(", ")}` : "power/steering is in sync");
+  console.log(
+    drift.length ? `synced: ${drift.join(", ")}` : "power/steering is in sync",
+  );
 }

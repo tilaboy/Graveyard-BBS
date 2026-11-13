@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "bin": { "graveyard": "./bin/graveyard.mjs" },
+  "bin": {
+    "graveyard": "./bin/graveyard.mjs"
+  },
   "scripts": {
     "test": "vitest run",
     "typecheck": "tsc --noEmit -p ."

@@ -70,7 +70,9 @@ export class Store {
     RoleSchema.parse(role);
     const secret = `gy_${randomBytes(24).toString("hex")}`;
     this.db
-      .prepare("INSERT INTO callers (handle, role, token_hash) VALUES (?, ?, ?)")
+      .prepare(
+        "INSERT INTO callers (handle, role, token_hash) VALUES (?, ?, ?)",
+      )
       .run(handle, role, hashSecret(secret));
     return secret;
   }

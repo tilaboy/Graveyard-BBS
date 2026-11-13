@@ -28,16 +28,31 @@ export interface Verdict {
 }
 const deny = (reason: string): Verdict => ({ allow: false, reason });
 
-const StatusInput = z.object({ thread_id: z.string(), to: z.string(), reason: z.string().optional() });
+const StatusInput = z.object({
+  thread_id: z.string(),
+  to: z.string(),
+  reason: z.string().optional(),
+});
 
 /** R5.1: dry-run the same core rules the MCP tool applies; nothing is appended. */
-export function checkPreTool(svc: Service, actor: Actor, ev: HookEvent): Verdict {
+export function checkPreTool(
+  svc: Service,
+  actor: Actor,
+  ev: HookEvent,
+): Verdict {
   const name = ev.tool_name ?? "";
   if (SET_STATUS.test(name)) {
     const a = StatusInput.safeParse(ev.tool_input);
     if (!a.success) return deny("bbs_set_status needs thread_id and to");
     const to = z
-      .enum(["pending", "running", "blocked", "awaiting-review", "done", "cancelled"])
+      .enum([
+        "pending",
+        "running",
+        "blocked",
+        "awaiting-review",
+        "done",
+        "cancelled",
+      ])
       .safeParse(a.data.to);
     if (!to.success) return deny(`unknown status '${a.data.to}'`);
     const r = svc.check({
@@ -55,9 +70,14 @@ export function checkPreTool(svc: Service, actor: Actor, ev: HookEvent): Verdict
   const t = svc.currentTask(actor.handle);
   if (!t) return { allow: true };
   if (t.packet !== null && t.acked !== t.packet)
-    return deny(` ☠  ACCESS DENIED · NO_ACK  ${t.thread_id}: ACK ${t.packet} before writing`);
+    return deny(
+      ` ☠  ACCESS DENIED · NO_ACK  ${t.thread_id}: ACK ${t.packet} before writing`,
+    );
 
-  const raw = ev.tool_input["path"] ?? ev.tool_input["file_path"] ?? ev.tool_input["filePath"];
+  const raw =
+    ev.tool_input["path"] ??
+    ev.tool_input["file_path"] ??
+    ev.tool_input["filePath"];
   if (typeof raw !== "string") return { allow: true };
   const abs = isAbsolute(raw) ? raw : resolve(ev.cwd ?? svc.config.repo, raw);
   const rel = [worktreePath(svc.config.dataDir, t.thread_id), svc.config.repo]
@@ -67,7 +87,9 @@ export function checkPreTool(svc: Service, actor: Actor, ev: HookEvent): Verdict
   for (const m of svc.boards[boardOf(t.thread_id)]?.pathLocks ?? []) {
     if (!globMatch(m.glob, rel)) continue;
     if (svc.p.locks[m.lock]?.holder?.thread !== t.thread_id)
-      return deny(` ☠  ACCESS DENIED · STALE_TOKEN  ${rel} is under lock '${m.lock}', which ${t.thread_id} does not hold. Claim it with bbs_claim_lock.`);
+      return deny(
+        ` ☠  ACCESS DENIED · STALE_TOKEN  ${rel} is under lock '${m.lock}', which ${t.thread_id} does not hold. Claim it with bbs_claim_lock.`,
+      );
   }
   return { allow: true };
 }
@@ -82,11 +104,19 @@ export function recordStop(svc: Service, actor: Actor, diffStat: string): void {
     thread_id: t.thread_id,
     kind: "MILESTONE",
     body: {
-      text: diffStat.trim() === "" ? "turn ended, no file changes" : `turn ended\n${diffStat.trim()}`,
+      text:
+        diffStat.trim() === ""
+          ? "turn ended, no file changes"
+          : `turn ended\n${diffStat.trim()}`,
       code_change: diffStat.trim() !== "",
     },
   });
   for (const l of Object.values(svc.p.locks))
     if (l.holder?.thread === t.thread_id && l.holder.caller === actor.handle)
-      svc.exec({ type: "heartbeat", actor, thread_id: t.thread_id, lock: l.name });
+      svc.exec({
+        type: "heartbeat",
+        actor,
+        thread_id: t.thread_id,
+        lock: l.name,
+      });
 }

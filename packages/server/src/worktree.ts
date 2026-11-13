@@ -21,8 +21,17 @@ export function run(
       { cwd, timeout: timeoutMs, maxBuffer: 8 * 1024 * 1024 },
       (err, stdout, stderr) => {
         const e = err as (NodeJS.ErrnoException & { killed?: boolean }) | null;
-        const code = !e ? 0 : e.killed ? 124 : typeof e.code === "number" ? e.code : 1;
-        resolve({ code, out: `${stdout}${stderr}${e && !e.killed && typeof e.code !== "number" ? e.message : ""}` });
+        const code = !e
+          ? 0
+          : e.killed
+            ? 124
+            : typeof e.code === "number"
+              ? e.code
+              : 1;
+        resolve({
+          code,
+          out: `${stdout}${stderr}${e && !e.killed && typeof e.code !== "number" ? e.message : ""}`,
+        });
       },
     );
   });

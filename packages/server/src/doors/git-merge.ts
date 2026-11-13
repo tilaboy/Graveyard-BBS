@@ -10,9 +10,23 @@ export const gitMerge = defineDoor({
   async run(ctx) {
     const r = await run(
       "git",
-      ["-c", "user.name=graveyard", "-c", "user.email=graveyard@localhost", "merge", "--no-ff", "-m", `merge gy/${ctx.thread_id}`, `gy/${ctx.thread_id}`],
+      [
+        "-c",
+        "user.name=graveyard",
+        "-c",
+        "user.email=graveyard@localhost",
+        "merge",
+        "--no-ff",
+        "-m",
+        `merge gy/${ctx.thread_id}`,
+        `gy/${ctx.thread_id}`,
+      ],
       ctx.svc.config.repo,
     );
-    return { exitCode: r.code, log: r.out, extra: { branch: `gy/${ctx.thread_id}` } };
+    return {
+      exitCode: r.code,
+      log: r.out,
+      extra: { branch: `gy/${ctx.thread_id}` },
+    };
   },
 });

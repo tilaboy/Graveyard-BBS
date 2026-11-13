@@ -16,7 +16,11 @@ export interface Scrubber {
 }
 
 /** Spec 00 design §2: strip caller tokens, env secret values and absolute home / repo paths from every string. */
-export function makeScrubber(env: NodeJS.ProcessEnv, repo: string, home = homedir()): Scrubber {
+export function makeScrubber(
+  env: NodeJS.ProcessEnv,
+  repo: string,
+  home = homedir(),
+): Scrubber {
   const secrets = Object.entries(env)
     .filter(([k, v]) => SECRET_NAME.test(k) && (v?.length ?? 0) >= 6)
     .map(([, v]) => v as string)
@@ -48,7 +52,10 @@ export interface RunBundle {
   outputs: { landingUrl?: string; games: string[]; decks: string[] };
 }
 
-const PublishExtra = z.object({ kind: z.enum(["game", "deck"]), slug: z.string() });
+const PublishExtra = z.object({
+  kind: z.enum(["game", "deck"]),
+  slug: z.string(),
+});
 
 /** Task 17: `runs/<run-id>.bundle.json` plus `runs/<run-id>/artifacts/<sha256>`. */
 export function exportRun(
@@ -60,15 +67,23 @@ export function exportRun(
   env: NodeJS.ProcessEnv = process.env,
   now = new Date(),
 ): string {
-  if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(runId)) throw new Error(`bad run id '${runId}'`);
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(runId))
+    throw new Error(`bad run id '${runId}'`);
   const scrub = makeScrubber(env, config.repo);
   const events = store.events();
-  const evidence = events.flatMap((e) => (e.type === "EVIDENCE" ? [parseEvidence(e.body.text)] : []));
+  const evidence = events.flatMap((e) =>
+    e.type === "EVIDENCE" ? [parseEvidence(e.body.text)] : [],
+  );
   const published = evidence.flatMap((ev) => {
-    const p = ev?.door === "publish" ? PublishExtra.safeParse(ev.extra) : undefined;
+    const p =
+      ev?.door === "publish" ? PublishExtra.safeParse(ev.extra) : undefined;
     return p?.success ? [p.data] : [];
   });
-  const deployUrls = evidence.flatMap((ev) => (ev?.door === "deploy" && typeof ev.extra["url"] === "string" ? [ev.extra["url"]] : []));
+  const deployUrls = evidence.flatMap((ev) =>
+    ev?.door === "deploy" && typeof ev.extra["url"] === "string"
+      ? [ev.extra["url"]]
+      : [],
+  );
 
   const files = store.files();
   const artDir = join(outDir, runId, "artifacts");
@@ -82,7 +97,11 @@ export function exportRun(
     project: "graveyard-bbs",
     boards: Object.values(boards),
     events,
-    artifacts: files.map((f) => ({ sha256: f.sha256, name: f.name, path: relative(outDir, join(artDir, f.sha256)) })),
+    artifacts: files.map((f) => ({
+      sha256: f.sha256,
+      name: f.name,
+      path: relative(outDir, join(artDir, f.sha256)),
+    })),
     outputs: {
       ...(landing ? { landingUrl: landing } : {}),
       games: published.filter((p) => p.kind === "game").map((p) => p.slug),

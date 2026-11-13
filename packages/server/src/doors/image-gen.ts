@@ -6,11 +6,17 @@ import { parseEvidence } from "../commands.js";
 import { defineDoor } from "./types.js";
 
 /** Pluggable provider (R4.4). Returns the bytes of one image. */
-export type ImageProvider = (prompt: string) => Promise<{ ext: string; data: Buffer }>;
+export type ImageProvider = (
+  prompt: string,
+) => Promise<{ ext: string; data: Buffer }>;
 
 /** Stub for tests and the demo: a deterministic SVG derived from the prompt. */
 export const stubProvider: ImageProvider = async (prompt) => {
-  const hue = parseInt(createHash("sha256").update(prompt).digest("hex").slice(0, 4), 16) % 360;
+  const hue =
+    parseInt(
+      createHash("sha256").update(prompt).digest("hex").slice(0, 4),
+      16,
+    ) % 360;
   const esc = prompt.replace(/[<>&"]/g, "");
   return {
     ext: "svg",
@@ -29,10 +35,14 @@ export function makeImageGen(provider: ImageProvider = stubProvider) {
     async run(ctx, args) {
       const t = ctx.svc.p.tasks[ctx.thread_id];
       const used = (t?.posts ?? []).filter(
-        (p) => p.type === "EVIDENCE" && parseEvidence(p.text)?.door === "image_gen",
+        (p) =>
+          p.type === "EVIDENCE" && parseEvidence(p.text)?.door === "image_gen",
       ).length;
       if (used >= MAX_GENERATIONS)
-        return { exitCode: 1, log: `budget: ${MAX_GENERATIONS} generations used\n` };
+        return {
+          exitCode: 1,
+          log: `budget: ${MAX_GENERATIONS} generations used\n`,
+        };
       const img = await provider(args.prompt);
       const dir = join(ctx.worktree, "images");
       mkdirSync(dir, { recursive: true });
@@ -41,7 +51,10 @@ export function makeImageGen(provider: ImageProvider = stubProvider) {
       return {
         exitCode: 0,
         log: `generated images/${name} (${img.data.length} bytes)\n`,
-        extra: { file: `images/${name}`, sha256: createHash("sha256").update(img.data).digest("hex") },
+        extra: {
+          file: `images/${name}`,
+          sha256: createHash("sha256").update(img.data).digest("hex"),
+        },
       };
     },
   });

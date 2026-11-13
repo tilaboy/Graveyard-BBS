@@ -10,7 +10,12 @@ const ResultSchema = z.union([
   z.object({ ok: z.literal(true), value: z.unknown() }),
   z.object({
     ok: z.literal(false),
-    error: z.object({ code: z.string(), message: z.string(), hint: z.string(), voice: z.string() }),
+    error: z.object({
+      code: z.string(),
+      message: z.string(),
+      hint: z.string(),
+      voice: z.string(),
+    }),
   }),
 ]);
 
@@ -20,14 +25,26 @@ export function httpBackend(baseUrl: string, token: string): Backend {
     try {
       const res = await fetch(`${baseUrl}/api/tools/${name}`, {
         method: "POST",
-        headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+        headers: {
+          authorization: `Bearer ${token}`,
+          "content-type": "application/json",
+        },
         body: JSON.stringify(args ?? {}),
       });
       const parsed = ResultSchema.safeParse(await res.json());
-      if (!parsed.success) return toolFail("DOOR_FAILED", `unexpected server reply (HTTP ${res.status})`, "Is GRAVEYARD_URL a Graveyard server?");
+      if (!parsed.success)
+        return toolFail(
+          "DOOR_FAILED",
+          `unexpected server reply (HTTP ${res.status})`,
+          "Is GRAVEYARD_URL a Graveyard server?",
+        );
       return parsed.data as ToolResult;
     } catch (e) {
-      return toolFail("DOOR_FAILED", `server unreachable: ${e instanceof Error ? e.message : String(e)}`, "Start it with `graveyard serve`.");
+      return toolFail(
+        "DOOR_FAILED",
+        `server unreachable: ${e instanceof Error ? e.message : String(e)}`,
+        "Start it with `graveyard serve`.",
+      );
     }
   };
 }
@@ -38,7 +55,12 @@ export function renderError(e: ToolError): string {
     ` ☠  ACCESS DENIED · ${e.code}  ${e.message}`,
     ` > "${e.voice}"`,
     ` > hint: ${e.hint}`,
-    JSON.stringify({ code: e.code, message: e.message, hint: e.hint, voice: e.voice }),
+    JSON.stringify({
+      code: e.code,
+      message: e.message,
+      hint: e.hint,
+      voice: e.voice,
+    }),
   ].join("\n");
 }
 
@@ -46,12 +68,23 @@ export function renderError(e: ToolError): string {
 export function createMcpServer(backend: Backend): McpServer {
   const server = new McpServer({ name: "graveyard", version: "0.1.0" });
   for (const t of buildTools()) {
-    server.registerTool(t.name, { description: t.description, inputSchema: t.schema.shape }, async (args: unknown) => {
-      const r = await backend(t.name, args);
-      return r.ok
-        ? { content: [{ type: "text" as const, text: JSON.stringify(r.value) }] }
-        : { isError: true, content: [{ type: "text" as const, text: renderError(r.error) }] };
-    });
+    server.registerTool(
+      t.name,
+      { description: t.description, inputSchema: t.schema.shape },
+      async (args: unknown) => {
+        const r = await backend(t.name, args);
+        return r.ok
+          ? {
+              content: [
+                { type: "text" as const, text: JSON.stringify(r.value) },
+              ],
+            }
+          : {
+              isError: true,
+              content: [{ type: "text" as const, text: renderError(r.error) }],
+            };
+      },
+    );
   }
   return server;
 }

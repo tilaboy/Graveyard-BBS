@@ -34,7 +34,9 @@ export interface RegisteredDoor {
   run(ctx: DoorContext, args: unknown): Promise<DoorResult>;
 }
 
-export const defineDoor = <S extends z.ZodType>(d: Door<S>): RegisteredDoor => ({
+export const defineDoor = <S extends z.ZodType>(
+  d: Door<S>,
+): RegisteredDoor => ({
   name: d.name,
   ...(d.lock ? { lock: d.lock } : {}),
   argsSchema: d.argsSchema,

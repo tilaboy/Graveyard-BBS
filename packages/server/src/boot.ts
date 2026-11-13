@@ -13,6 +13,8 @@ export function openService(
 ): Service {
   const config = loadConfig(cwd, overrides);
   mkdirSync(config.dataDir, { recursive: true });
-  const store = new Store(env["GRAVEYARD_DB"] ?? join(config.dataDir, "graveyard.db"));
+  const store = new Store(
+    env["GRAVEYARD_DB"] ?? join(config.dataDir, "graveyard.db"),
+  );
   return new Service(store, config, loadBoards(config.boardsDir));
 }

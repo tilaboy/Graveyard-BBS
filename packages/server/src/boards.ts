@@ -52,7 +52,13 @@ export function parseBoard(name: string, md: string): Board {
       .map((glob) => ({ glob, lock: lock ?? "" })),
   );
   const cmd = /## Test command\s+`([^`]+)`/.exec(md)?.[1];
-  return { name, doors, doorLocks, pathLocks, ...(cmd ? { testCommand: cmd } : {}) };
+  return {
+    name,
+    doors,
+    doorLocks,
+    pathLocks,
+    ...(cmd ? { testCommand: cmd } : {}),
+  };
 }
 
 export function loadBoards(dir: string): Record<string, Board> {
@@ -66,7 +72,8 @@ export function loadBoards(dir: string): Record<string, Board> {
 }
 
 /** Thread ids are `<board>-<slug>` (a git ref cannot hold ':'). */
-export const boardOf = (threadId: string): string => threadId.split("-")[0] ?? "";
+export const boardOf = (threadId: string): string =>
+  threadId.split("-")[0] ?? "";
 export const slugOf = (threadId: string): string =>
   threadId.slice(threadId.indexOf("-") + 1);
 

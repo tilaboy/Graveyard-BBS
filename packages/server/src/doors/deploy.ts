@@ -1,4 +1,10 @@
-import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, extname, join, relative, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import { z } from "zod";
@@ -29,7 +35,12 @@ export class LocalTarget implements DeployTarget {
 
 /** The few AWS calls we need; the real adapter is `awsClientFromSdk`, tests pass a fake. */
 export interface AwsClient {
-  putObject(bucket: string, key: string, body: Buffer, contentType: string): Promise<void>;
+  putObject(
+    bucket: string,
+    key: string,
+    body: Buffer,
+    contentType: string,
+  ): Promise<void>;
   invalidate(distribution: string, paths: string[]): Promise<void>;
   distributionDomain(distribution: string): Promise<string>;
 }
@@ -83,7 +94,14 @@ export async function awsClientFromSdk(): Promise<AwsClient> {
   const cf = new CF({});
   return {
     async putObject(Bucket, Key, Body, ContentType) {
-      await s3.send(new (s3m["PutObjectCommand"] as Ctor)({ Bucket, Key, Body, ContentType }));
+      await s3.send(
+        new (s3m["PutObjectCommand"] as Ctor)({
+          Bucket,
+          Key,
+          Body,
+          ContentType,
+        }),
+      );
     },
     async invalidate(distribution, paths) {
       await cf.send(
@@ -99,7 +117,11 @@ export async function awsClientFromSdk(): Promise<AwsClient> {
     async distributionDomain(distribution) {
       const r = z
         .object({ Distribution: z.object({ DomainName: z.string() }) })
-        .parse(await cf.send(new (cfm["GetDistributionCommand"] as Ctor)({ Id: distribution })));
+        .parse(
+          await cf.send(
+            new (cfm["GetDistributionCommand"] as Ctor)({ Id: distribution }),
+          ),
+        );
       return r.Distribution.DomainName;
     },
   };
@@ -123,7 +145,11 @@ export function readTree(root: string): DeployFile[] {
     for (const name of readdirSync(dir)) {
       const p = join(dir, name);
       if (statSync(p).isDirectory()) walk(p);
-      else out.push({ rel: relative(root, p).split(sep).join("/"), body: readFileSync(p) });
+      else
+        out.push({
+          rel: relative(root, p).split(sep).join("/"),
+          body: readFileSync(p),
+        });
     }
   };
   walk(root);
@@ -146,7 +172,11 @@ export function makeDeploy(
     argsSchema: z.object({ dir: z.string().default("site") }),
     async run(ctx, args) {
       const src = inside(ctx.worktree, args.dir);
-      if (!src) return { exitCode: 1, log: `dir '${args.dir}' is outside the worktree\n` };
+      if (!src)
+        return {
+          exitCode: 1,
+          log: `dir '${args.dir}' is outside the worktree\n`,
+        };
       let files: DeployFile[];
       try {
         files = readTree(src);
@@ -157,7 +187,11 @@ export function makeDeploy(
         return { exitCode: 1, log: `no index.html in '${args.dir}'\n` };
       const target = await getTarget(join(ctx.svc.config.dataDir, "deploy"));
       const { url } = await target.deploy(ctx.thread_id, files);
-      return { exitCode: 0, log: `deployed ${files.length} files\n${url}\n`, extra: { url, files: files.length } };
+      return {
+        exitCode: 0,
+        log: `deployed ${files.length} files\n${url}\n`,
+        extra: { url, files: files.length },
+      };
     },
   });
 }
