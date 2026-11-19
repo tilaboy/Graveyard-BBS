@@ -17,6 +17,7 @@ import {
 } from "./ansi.js";
 import {
   boardNames,
+  childrenOf,
   isOpen,
   online,
   openAsks,
@@ -365,18 +366,29 @@ export function treeRows(s: State, v: View): TreeRow[] {
   for (const b of boardNames(s)) {
     const bOpen = open[`b:${b}`] !== false;
     const { tasks, more, needs } = treeTasks(s, b);
+    const top = threadsOf(s, b).filter(
+      (t) => !t.parent || !s.p.tasks[t.parent],
+    ).length;
     out.push({
       key: `b:${b}`,
       kind: "board",
       board: b,
-      line: `${bOpen ? "▾" : "▸"} ${sgr(COLOR.bold, `#${b}`)}  ${sgr(COLOR.dim, `(${threadsOf(s, b).length})`)}`,
+      line: `${bOpen ? "▾" : "▸"} ${sgr(COLOR.bold, `#${b}`)}  ${sgr(COLOR.dim, `(${top})`)}`,
     });
     if (!bOpen) continue;
-    for (const t of tasks) {
+    // A task row, its posts when open, then its stage/split threads one level deeper.
+    const taskRow = (t: Task, depth: number): void => {
       const tOpen = open[`t:${t.thread_id}`] === true;
+      const kids = childrenOf(s, t.thread_id);
       const n = needs.has(t.thread_id) ? needsYou(v) : undefined;
-      const title = pad(cut(t.text.split("\n")[0] ?? "", tw), tw);
-      const row = `    ${tOpen ? "▾" : "▸"} ${pad(badge(t.status), badgeW)} ${n ? sgr(n.style, title) : title} ${pad(t.owner ?? "—", 12)}${n ? ` ${n.lane}` : ""}`;
+      const ind = "    ".repeat(depth + 1);
+      const fold = tOpen ? "▾" : "▸";
+      const mark = depth > 0 ? "└ " : "";
+      const w = Math.max(10, tw - 4 * depth - mark.length);
+      const title = pad(cut(t.text.split("\n")[0] ?? "", w), w);
+      const sub =
+        !tOpen && kids.length ? sgr(COLOR.dim, ` +${kids.length}`) : "";
+      const row = `${ind}${mark}${fold} ${pad(badge(t.status), badgeW)} ${n ? sgr(n.style, title) : title} ${pad(t.owner ?? "—", 12)}${sub}${n ? ` ${n.lane}` : ""}`;
       out.push({
         key: `t:${t.thread_id}`,
         kind: "task",
@@ -384,21 +396,23 @@ export function treeRows(s: State, v: View): TreeRow[] {
         thread: t.thread_id,
         line: t.status === "done" ? sgr(COLOR.dim, row) : row,
       });
-      if (!tOpen) continue;
+      if (!tOpen) return;
       postsOf(s, t.thread_id).forEach((e, i) => {
         const d = describe(e, s, v);
         const text = d.body[0]
-          ? ` ${cut(d.body[0], Math.max(10, v.cols - 50))}`
+          ? ` ${cut(d.body[0], Math.max(10, v.cols - 50 - 4 * depth))}`
           : "";
         out.push({
           key: `p:${t.thread_id}:${e.seq}`,
           kind: "post",
           board: b,
           thread: t.thread_id,
-          line: `        ${sgr(COLOR.dim, `#${i + 1} ${pad(e.caller, 12)}`)} ${sgr(d.style, d.head)}${sgr(d.style, text)}`,
+          line: `${ind}    ${sgr(COLOR.dim, `#${i + 1} ${pad(e.caller, 12)}`)} ${sgr(d.style, d.head)}${sgr(d.style, text)}`,
         });
       });
-    }
+      for (const k of kids) taskRow(k, depth + 1);
+    };
+    for (const t of tasks) taskRow(t, 0);
     if (more > 0)
       out.push({
         key: `m:${b}`,

@@ -140,13 +140,25 @@ export const boardOf = (thread: string): string => thread.split("-")[0] ?? "";
 export const isOpen = (t: Task): boolean =>
   t.status !== "done" && t.status !== "cancelled";
 
+/** Bookkeeping threads the moderator keeps for itself; never shown as work. */
+export const SYSTEM_THREADS = new Set(["mod-cursor"]);
+
 export const threadsOf = (s: State, board?: string): Task[] =>
   Object.values(s.p.tasks).filter(
-    (t) => !board || boardOf(t.thread_id) === board,
+    (t) =>
+      !SYSTEM_THREADS.has(t.thread_id) &&
+      (!board || boardOf(t.thread_id) === board),
   );
 
 export const boardNames = (s: State): string[] =>
-  [...new Set(Object.keys(s.p.tasks).map(boardOf))].sort();
+  [...new Set(threadsOf(s).map((t) => boardOf(t.thread_id)))].sort();
+
+/** Stage and split threads the moderator opened under a task, oldest first. */
+export const childrenOf = (s: State, parent: string): Task[] =>
+  threadsOf(s).filter((t) => t.parent === parent);
+
+/** A task with no (known) parent: the row the tree starts from. */
+const isTop = (s: State, t: Task): boolean => !t.parent || !s.p.tasks[t.parent];
 
 const CALLER_ROLE =
   /^(sysop|moderator|designer|builder|reviewer|release|artist)/;
@@ -223,12 +235,22 @@ export function treeTasks(
   const needs = new Set(openAsks(s).map((a) => a.thread));
   const last = new Map<string, number>();
   for (const e of s.events) last.set(e.thread_id, e.seq);
-  const all = threadsOf(s, board).sort(
-    (a, b) =>
-      Number(needs.has(b.thread_id)) - Number(needs.has(a.thread_id)) ||
-      (last.get(b.thread_id) ?? 0) - (last.get(a.thread_id) ?? 0),
-  );
-  const must = (t: Task) => needs.has(t.thread_id) || t.status === "running";
+  // A task counts its stage/split threads: their ASKs, running agents and activity lift it.
+  const family = (t: Task): Task[] => [
+    t,
+    ...childrenOf(s, t.thread_id).flatMap(family),
+  ];
+  const needsAny = (t: Task) => family(t).some((x) => needs.has(x.thread_id));
+  const runsAny = (t: Task) => family(t).some((x) => x.status === "running");
+  const lastAny = (t: Task) =>
+    Math.max(...family(t).map((x) => last.get(x.thread_id) ?? 0));
+  const all = threadsOf(s, board)
+    .filter((t) => isTop(s, t))
+    .sort(
+      (a, b) =>
+        Number(needsAny(b)) - Number(needsAny(a)) || lastAny(b) - lastAny(a),
+    );
+  const must = (t: Task) => needsAny(t) || runsAny(t);
   let room = TREE_FILL - all.filter(must).length;
   const tasks = all.filter((t) => must(t) || room-- > 0);
   return { tasks, more: all.length - tasks.length, needs };

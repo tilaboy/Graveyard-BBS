@@ -7,15 +7,22 @@ import {
 } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
-import { EventSchema } from "@graveyard/core";
+import { EventSchema, fold } from "@graveyard/core";
 import { z } from "zod";
-import { step, type Bbs } from "./execute.js";
+import { execute, step, type Bbs } from "./execute.js";
 import { loadPipelines } from "./pipeline.js";
-import { recover, seedHub, storedCursor, type State } from "./planner.js";
+import {
+  recover,
+  seedHub,
+  selectLessons,
+  storedCursor,
+  type State,
+} from "./planner.js";
 import { KiroCliRunner, KiroCrewRunner } from "./runner.js";
 
 const USAGE = `graveyard-moderator step [--runner crew|cli] [--boards DIR] [--data-dir DIR] [--project NAME]
 graveyard-moderator agent <thread> <agent-id>     remember a Kiro Crew agent id (for steering)
+graveyard-moderator respawn <thread>              redo a spawn nobody made (rotates the child token)
 
 Env: GRAVEYARD_URL (default http://127.0.0.1:2626), GRAVEYARD_TOKEN (the moderator's token).
 "step" prints JSON: crew_calls (Kiro Crew tool calls YOU must make), errors, actions.`;
@@ -77,6 +84,49 @@ async function main(argv: string[]) {
 
   if (cmd === "agent" && thread && id) {
     writeJson(agentsFile, { ...readJson(agentsFile, {}), [thread]: id });
+    return;
+  }
+  if (cmd === "respawn" && thread) {
+    // A spawn the planner already asked for but nobody made (e.g. the Crew session had no
+    // spawn_run): re-register the child, which rotates its token, and print the call again.
+    const url = process.env["GRAVEYARD_URL"] ?? "http://127.0.0.1:2626";
+    const token = process.env["GRAVEYARD_TOKEN"];
+    if (!token) throw new Error("GRAVEYARD_TOKEN is not set");
+    const bbs = http(url, token);
+    const state = readJson<State | undefined>(stateFile, undefined);
+    const rec = state?.stages[thread];
+    if (!state || !rec) throw new Error(`no stage '${thread}' in ${stateFile}`);
+    if (readJson<Record<string, string>>(agentsFile, {})[thread])
+      throw new Error(`${thread} already has an agent id; not respawning`);
+    const log = await bbs.events();
+    const p = fold(log);
+    if (p.tasks[thread]?.status !== "pending")
+      throw new Error(
+        `${thread} is ${p.tasks[thread]?.status ?? "missing"}, not pending`,
+      );
+    const goal = `${p.tasks[rec.root]?.text ?? ""} ${p.tasks[thread]?.text ?? ""}`;
+    const crew = new KiroCrewRunner(readJson(agentsFile, {}));
+    const action = {
+      type: "spawn" as const,
+      thread,
+      handle: rec.handle,
+      role: rec.role,
+      resume: false,
+      lessons: selectLessons(
+        state.lessons,
+        goal,
+        thread.split("-")[0] ?? "",
+        thread,
+      ),
+    };
+    const r = await execute(
+      [action],
+      { bbs, runner: crew, now: Date.now },
+      values.project,
+    );
+    console.log(
+      JSON.stringify({ crew_calls: crew.calls, errors: r.errors }, null, 2),
+    );
     return;
   }
   if (cmd !== "step") {

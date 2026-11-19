@@ -175,3 +175,56 @@ describe("needs-you monster", () => {
     ).toMatchSnapshot();
   });
 });
+
+describe("stage threads sit under their task", () => {
+  const world = () => {
+    const w = new World();
+    pending(w, "arcade-bat");
+    w.must({
+      type: "create_task",
+      actor: actors.mod,
+      thread_id: "arcade-bat-build",
+      text: "build: bat",
+      parent: "arcade-bat",
+    });
+    w.must({
+      type: "create_task",
+      actor: actors.mod,
+      thread_id: "mod-cursor",
+      text: "Moderator cursor (system)",
+    });
+    return w;
+  };
+
+  it("a child is not its own top-level row, and the system cursor board is hidden", () => {
+    const s = stateOf(world());
+    expect(treeTasks(s, "arcade").tasks.map((t) => t.thread_id)).toEqual([
+      "arcade-bat",
+    ]);
+    const text = plain(render(s, viewOf({ screen: "tree", cols: 120 })));
+    expect(text).not.toContain("#mod");
+    expect(text).toContain("#arcade  (1)");
+    expect(text).toContain("+1"); // folded parent says it has a child
+  });
+
+  it("opening the task shows the child one level deeper", () => {
+    const s = stateOf(world());
+    const text = plain(
+      render(
+        s,
+        viewOf({
+          screen: "tree",
+          cols: 120,
+          tree: { open: { "t:arcade-bat": true }, at: "t:arcade-bat" },
+        }),
+      ),
+    );
+    const lines = text.split("\n");
+    const parent = lines.findIndex((l) => l.includes("Task arcade-bat"));
+    const child = lines.findIndex(
+      (l) => l.includes("└") && l.includes("build: bat"),
+    );
+    expect(parent).toBeGreaterThan(-1);
+    expect(child).toBeGreaterThan(parent);
+  });
+});
