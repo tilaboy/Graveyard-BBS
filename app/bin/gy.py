@@ -3,6 +3,7 @@
 usage: gy.py mcp | serve [args] | moderator <args>
 """
 import os
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -40,6 +41,33 @@ def find_node() -> str:
     raise SystemExit("node not found. Install Node.js, or set GRAVEYARD_NODE to its path.")
 
 
+def url_file() -> Path:
+    """Where the app backend records the address of the BBS it started."""
+    return find_home() / ".graveyard" / "app-url"
+
+
+def write_url(url: str) -> None:
+    """Record (or clear, with "") the running app BBS address."""
+    try:
+        p = url_file()
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(url, encoding="utf-8")
+    except (OSError, SystemExit):
+        pass
+
+
+def bbs_env() -> dict[str, str]:
+    """The environment for mcp/moderator: GRAVEYARD_URL points at the app's own BBS when it runs."""
+    env = dict(os.environ)
+    try:
+        url = url_file().read_text(encoding="utf-8").strip()
+    except (OSError, SystemExit):
+        url = ""
+    if re.fullmatch(r"http://127\.0\.0\.1:[0-9]{1,5}", url):
+        env["GRAVEYARD_URL"] = url
+    return env
+
+
 def command(args: list[str]) -> tuple[Path, list[str]]:
     """(working directory, argv) for one launcher command."""
     home = find_home()
@@ -53,4 +81,4 @@ def command(args: list[str]) -> tuple[Path, list[str]]:
 if __name__ == "__main__":
     cwd, argv = command(sys.argv[1:])
     os.chdir(cwd)
-    os.execv(argv[0], argv)
+    os.execve(argv[0], argv, bbs_env())

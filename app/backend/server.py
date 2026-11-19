@@ -85,9 +85,12 @@ class Bbs:
             m = re.match(r"Web terminal: (\S+)", line)
             if m:
                 self.url = m.group(1)
+                # Agents' MCP and the moderator read this to reach THIS BBS, not a stray one.
+                gy.write_url(self.url.split("/term/")[0])
             elif line:
                 last = line
         self.url = ""
+        gy.write_url("")
         self.error = f"graveyard serve stopped: {last}"
 
     def launch(self) -> dict:

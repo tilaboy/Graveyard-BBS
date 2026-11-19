@@ -1,6 +1,12 @@
 import { spawnSync } from "node:child_process";
 import { createHash, createHmac } from "node:crypto";
-import { existsSync, mkdtempSync, readFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -71,6 +77,27 @@ describe("Kiro Crew app (spec 05)", () => {
     });
     expect(r.status).not.toBe(0);
     expect(r.stderr).toContain("GRAVEYARD_HOME");
+  });
+
+  it("agents' MCP reaches the app's own BBS: the URL the backend records wins, junk is ignored", () => {
+    // A throwaway checkout, so the test never rewrites the real app's URL file.
+    const fake = mkdtempSync(join(tmpdir(), "gy-url-"));
+    mkdirSync(join(fake, "packages/server/bin"), { recursive: true });
+    writeFileSync(join(fake, "packages/server/bin/graveyard.mjs"), "");
+    const run = (written: string) =>
+      py(
+        `import gy, json
+gy.write_url(${JSON.stringify(written)})
+print(json.dumps(gy.bbs_env().get("GRAVEYARD_URL")))`,
+        {
+          PYTHONPATH: join(APP, "bin"),
+          GRAVEYARD_HOME: fake,
+          GRAVEYARD_URL: "http://127.0.0.1:2626",
+        },
+      ).stdout.trim();
+    expect(run("http://127.0.0.1:49163")).toBe('"http://127.0.0.1:49163"');
+    expect(run("")).toBe('"http://127.0.0.1:2626"');
+    expect(run("http://evil.example:80")).toBe('"http://127.0.0.1:2626"');
   });
 
   it("R7.1: the launcher runs the server from GRAVEYARD_HOME", () => {

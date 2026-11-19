@@ -22,6 +22,7 @@ const USAGE = `usage: graveyard <command>
                                            start the BBS on 127.0.0.1 (web terminal at /term/, telnet 2323; 0 = no telnet)
   replay <bundle> [--speed N]              play a recorded run in this terminal
   caller add <handle> --role <role>        print a new token once
+  caller rotate <handle>                   replace a caller's token, print it once
   mcp                                      MCP stdio server (proxies to GRAVEYARD_URL)
   hook pre-tool|spawn|stop                 Kiro hook entry points (event JSON on stdin)
   seed [demo] [--repo DIR] [--lease S]     demo callers, threads and a clean demo repo
@@ -124,10 +125,22 @@ async function main(argv: string[]): Promise<number> {
     }
     case "caller": {
       const handle = positionals[1];
+      if (sub === "rotate" && handle) {
+        const svc = openService(process.cwd());
+        if (!svc.store.callers().some((c) => c.handle === handle)) {
+          console.error(`no caller '${handle}' in this BBS`);
+          return 1;
+        }
+        console.log(svc.store.rotateCaller(handle));
+        console.error(
+          `caller '${handle}' has a new token (shown once); the old one stops working.`,
+        );
+        return 0;
+      }
       const role = z.enum(ROLES).safeParse(values.role);
       if (sub !== "add" || !handle || !role.success) {
         console.error(
-          `usage: graveyard caller add <handle> --role <${ROLES.join("|")}>`,
+          `usage: graveyard caller add <handle> --role <${ROLES.join("|")}>\n       graveyard caller rotate <handle>`,
         );
         return 1;
       }
