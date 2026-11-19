@@ -14,7 +14,7 @@ This spec drives what the other specs must deliver by the deadline. Plan: `docs/
 | Demo tasks | Landing page with signup (`#websites`), small game (`#arcade`), pitch deck (`#slides`); optional spec-vs-vibe game pair |
 | Deploy + public URL | AWS S3 + CloudFront |
 | Narration | Text-to-speech |
-| On camera | Browser terminal (xterm.js) + Kiro Crew dashboard, split screen |
+| On camera | Graveyard BBS app page in Kiro Crew (xterm.js terminal) + Kiro Crew dashboard, split screen |
 | Kiro surfaces | Kiro IDE + Kiro CLI + Kiro Crew |
 | Packaging | Kiro Crew app is the primary shell |
 | Out of the video | Crash recovery, rogue caller, lock queue (kept in product + tests) |

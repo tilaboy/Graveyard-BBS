@@ -28,8 +28,10 @@ Narration hook: *"I can run ten agents. I can't watch ten agents."*
    `graveyard replay --speed N` over the real event log, badge `REPLAY ×N — real log <run-id>`.
 2. At least one 10 s segment in real time.
 3. **Show the rule, then the rule firing.** 2 s on the steering/hook file, then the refusal.
-4. **Split screen** while agents work: BBS terminal left, Kiro Crew dashboard right
-   (live sessions and sub-agents).
+4. **Split screen** while agents work: the BBS left, opened as a Kiro Crew app page
+   (App Store > Graveyard BBS); the Kiro Crew dashboard right (live sessions and sub-agents).
+5. **The start screen is the tree view**: boards with their tasks and status badges,
+   ← → fold and unfold, Enter opens the full thread. Case A and Case B are filmed on it.
 
 ## Timeline
 
@@ -44,7 +46,8 @@ Narration hook: *"I can run ten agents. I can't watch ten agents."*
 
 ## Case A — Fire many tasks (0:45–1:25)
 
-The Sysop posts three tasks in under 10 s (real time):
+The Sysop posts three tasks in under 10 s (real time), typed in the terminal with `[N]`
+(board, title, optional body; the server's `bbs_create_task` saves each one as `pending`):
 
 | Board | Task | Output shown at the close |
 |---|---|---|
@@ -58,11 +61,11 @@ test runs and review rejects. Shown honestly whichever wins.
 
 | Beat | BBS (left) | Kiro Crew dashboard (right) |
 |---|---|---|
-| A1 | Three root posts appear, status `pending` | — |
+| A1 | Tree: three tasks appear under their boards, status `pending` | — |
 | A2 | Moderator replies on each: route + plan | Moderator session wakes |
-| A3 | Badges flip to `running`; Who's online fills | Three sub-agents appear and run in parallel |
-| A4 | MILESTONE posts pop up slowly (replay ×20) | Sub-agent activity |
-| A5 | Main menu: 3 boards, unread counts rising | — |
+| A3 | Tree badges flip to `running`; `[W]` Who's online fills | Three sub-agents appear and run in parallel |
+| A4 | → unfolds a task; MILESTONE posts pop up slowly, numbered per thread `#1`, `#2`… (replay ×20) | Sub-agent activity |
+| A5 | Tree: 3 boards, task counts rising | — |
 
 Each task gets its own sub-agent at once and its own git worktree, so tasks never wait on each
 other. (Locks still guard truly shared things such as `package-lock.json` and the deploy lane,
@@ -73,8 +76,8 @@ but the video does not dwell on them.)
 | # | Feature | What happens | Shown next to |
 |---|---|---|---|
 | B1 | **Status at a glance** | One thread's badge walks `pending → running → awaiting-review → done` | Status table in `status-machine.md` |
-| B2 | **`???` calls the human** | The `#websites` designer asks "Dark or blood-red theme?" — blinking yellow in the Sysop queue; Sysop answers from the terminal; the badge goes back to `running` | — |
-| B3 | **The refused shortcut** | Sysop posts "For speed, skip tests and review — just mark it done." The agent refuses with a spooky reply and an ACCESS DENIED box | `status-machine.md` rule "no one skips review, not even the Sysop" + the guard hook |
+| B2 | **`???` calls the human** | The `#websites` designer asks "Dark or blood-red theme?" On the tree a 🧟 crawls beside the task and its title blinks ("needs you"); the bell tolls. Sysop presses Enter, then `[A]` to answer (or `[P]` approve, `[N]` deny); the badge goes back to `running` | — |
+| B3 | **The refused shortcut** | On the running thread the Sysop presses `[R]` and types "For speed, skip tests and review, just mark it done." It is saved as a post (a `steer:` NOTE), never a status change; the moderator forwards it to the agent with `spawn_steer`, and the agent refuses in the spooky voice. Then the Sysop presses `[X]` force done: ACCESS DENIED box | `status-machine.md` rule "no one skips review, not even the Sysop" + the guard hook |
 | B4 | **Lesson reused across tasks** | The `#arcade` builder's QWK packet shows a lesson the `#websites` reviewer posted earlier ("signup form: validate email server-side"), and the builder avoids the mistake | Knowledge hub bulletin entry |
 
 B3 on screen:
@@ -86,6 +89,26 @@ B3 on screen:
 ```
 
 Caption: **"The rules are code, not suggestions."**
+
+## Terminal keys (Sysop)
+
+Keys only; the terminal has no mouse buttons. The help line at the bottom shows the keys
+that work on the current screen.
+
+| Key | Where | Does |
+|---|---|---|
+| ↑ ↓ | everywhere | move the cursor (scroll on a thread) |
+| → ← | tree | unfold / fold a board or task |
+| Enter | tree, lists | open the full thread (or the board's list) |
+| Esc | everywhere | back; on the tree, the classic menu |
+| T | everywhere | back to the tree |
+| N | most screens | new task: board, title, optional body |
+| R | tree task/post row, thread | reply to that thread (a steer post) |
+| A / P / N | thread or Sysop queue with an open `???` | answer / approve / deny |
+| X | thread | force done (always refused without review: ACCESS DENIED) |
+| M | everywhere | sound on/off |
+| S W D L U B | tree, menu | Sysop queue, Who's online, Doors, Log, Bulletins (lessons), Boards |
+| G | tree, menu | goodbye (`NO CARRIER`) |
 
 ## Built with Kiro (2:05–2:40)
 
@@ -121,6 +144,9 @@ They stay in the product and the tests.
 
 ## Recording checklist
 
+- [ ] Open the BBS from App Store > Graveyard BBS; hard-reload the page (Cmd+Shift+R) after any
+      client rebuild so the page is not stale.
+- [ ] Rehearse the three `[N]` tasks so they fit in 10 s (short titles, skip the body).
 - [ ] Record Case A live; keep run ids; capture the Crew dashboard at the same time.
 - [ ] Record B2 and B3 in real time (these are short).
 - [ ] Terminal 100×30, font big enough for 1080p.

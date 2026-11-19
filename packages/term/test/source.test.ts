@@ -225,6 +225,16 @@ describe("LiveSource", () => {
           c.body === JSON.stringify({ thread_id: "t", ask_id: "a" }),
       ),
     ).toBe(true);
+    expect(
+      await src.act({ type: "steer", thread: "t", text: "go on" }),
+    ).toEqual({ ok: true });
+    expect(
+      calls.some(
+        (c) =>
+          c.url === "http://h/api/sysop/steer" &&
+          c.body === JSON.stringify({ thread_id: "t", text: "go on" }),
+      ),
+    ).toBe(true);
   });
   it("never reports success for a non-ok, malformed or unreachable reply (createTask)", async () => {
     const act = (f: typeof fetch) =>

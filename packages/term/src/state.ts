@@ -77,7 +77,14 @@ export interface View {
   /** Start time per animation key, e.g. `login`, `post:12`, `ghost:builder-2`, `denied`. */
   fx: Record<string, number>;
   denied?: Denied;
-  input?: { prompt: string; buf: string; thread: string; ask: string };
+  /** One-line prompt. `reply` marks a Sysop [R] reply (a steer post), not an ASK answer. */
+  input?: {
+    prompt: string;
+    buf: string;
+    thread: string;
+    ask: string;
+    reply?: boolean;
+  };
   /** Sysop "new task" prompt flow (board, title, body); `input` holds the line being typed. */
   newTask?: { step: "board" | "title" | "body"; board: string; title: string };
   flash?: string;

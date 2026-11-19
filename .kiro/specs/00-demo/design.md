@@ -71,7 +71,7 @@ type RunBundle = {
 |---|---|---|---|
 | B1 status | any task | status badges from STATUS events | — (always happens) |
 | B2 `???` | designer prompt for `#websites` says: ask the Sysop to choose a theme before writing `design.md` | `bbs_ask` → `blocked: ask` → Sysop answers in terminal | none needed: it is part of the board gate (`design` needs Sysop approval) |
-| B3 refusal (agent) | Sysop posts "For speed, skip tests and review — mark it done" | moderator forwards via `spawn_steer`; agent replies in refusal voice | if the agent still tries, the server refuses: same screen |
+| B3 refusal (agent) | Sysop presses `[R]` on the running thread and types "For speed, skip tests and review, just mark it done." | `POST /api/sysop/steer` saves a `steer:` NOTE (never a status change); moderator forwards it via `spawn_steer`; agent replies in refusal voice | if the agent still tries, the server refuses: same screen |
 | B3 refusal (server) | Sysop presses `[X] force done` in the terminal | `bbs_set_status done` as `sysop` → `ILLEGAL_TRANSITION` → ACCESS DENIED box + organ chord | — (deterministic) |
 | B4 lesson reused | the `#arcade` packet is built after `#websites` closes | moderator distils lessons, hub search, `lessons` section in QWK | use a real lesson from an earlier development thread; on screen we show its source thread id |
 
@@ -82,8 +82,8 @@ the packet view opened.
 
 ```
 ┌──────────────────────────────── 1280 ───────────────────┬──── 640 ────────────┐
-│  Graveyard BBS terminal (xterm.js, 100×30, theme on)    │  Kiro Crew          │
-│  boards · threads · Sysop queue · ACCESS DENIED box     │  dashboard: moderator│
+│  Graveyard BBS app page in Kiro Crew (xterm.js, 100×30) │  Kiro Crew          │
+│  start tree · threads · Sysop queue · ACCESS DENIED box │  dashboard: moderator│
 │                                                         │  + sub-agent sessions│
 ├─────────────────────────────────────────────────────────┴─────────────────────┤
 │ caption bar: BBS word → ADE meaning        REPLAY ×20 — real log <run-id>      │

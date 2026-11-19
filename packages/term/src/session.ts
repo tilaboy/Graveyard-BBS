@@ -291,6 +291,7 @@ export class Session {
         ? void (v.scroll = Math.max(0, v.scroll - 1))
         : this.move(1);
     const key = k.toLowerCase();
+    if (key === "r" && this.startReply()) return;
     if (key === "n" && !this.denies()) return this.startNewTask();
     this.screenKey(key);
   }
@@ -460,12 +461,42 @@ export class Session {
     else if (k === "enter") {
       delete this.view.input;
       if (this.view.newTask) return this.newTaskStep(i.buf.trim());
-      if (i.buf.trim())
+      const text = i.buf.trim();
+      if (text && i.reply)
         void this.run(
-          { type: "answer", thread: i.thread, ask: i.ask, text: i.buf.trim() },
+          { type: "steer", thread: i.thread, text },
+          "reply",
+          () => {
+            this.view.flash = `Posted to ${i.thread}.`;
+          },
+        );
+      else if (text)
+        void this.run(
+          { type: "answer", thread: i.thread, ask: i.ask, text },
           "answer",
         );
     } else if ([...k].length === 1) i.buf += stripUnsafe(k);
+  }
+
+  /** [R] on the full thread, or a task/post row of the tree: a one-line Sysop reply (a steer post). */
+  private startReply(): boolean {
+    const v = this.view;
+    const s = this.o.source.state();
+    const thread =
+      v.screen === "thread"
+        ? v.thread
+        : v.screen === "tree"
+          ? treeRows(s, v)[treeCursor(treeRows(s, v), v)]?.thread
+          : undefined;
+    if (!thread || !s.p.tasks[thread]) return false;
+    v.input = {
+      prompt: `Reply to ${thread}:`,
+      buf: "",
+      thread,
+      ask: "",
+      reply: true,
+    };
+    return true;
   }
 
   /** [N] on the menu: board, title, body, then the existing create_task command (the server checks the role). */

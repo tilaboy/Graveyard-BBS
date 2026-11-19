@@ -25,6 +25,7 @@ export type Action =
   | { type: "answer"; thread: string; ask: string; text: string }
   | { type: "approve"; thread: string; ask: string }
   | { type: "forceDone"; thread: string }
+  | { type: "steer"; thread: string; text: string }
   | { type: "createTask"; thread: string; text: string };
 
 export interface RefusalError {
@@ -350,7 +351,9 @@ export class LiveSource extends Base implements Source {
           ? ["sysop/approve", { thread_id: a.thread, ask_id: a.ask }]
           : a.type === "createTask"
             ? ["tools/bbs_create_task", { thread_id: a.thread, text: a.text }]
-            : ["sysop/force-done", { thread_id: a.thread }];
+            : a.type === "steer"
+              ? ["sysop/steer", { thread_id: a.thread, text: a.text }]
+              : ["sysop/force-done", { thread_id: a.thread }];
     let res: Response;
     try {
       res = await this.f(`${this.o.baseUrl}/api/${path}`, {

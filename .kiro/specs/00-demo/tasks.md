@@ -16,7 +16,7 @@ Ordered by week. Each task names the requirement it serves and the spec that doe
 
 ## Week 2 (Nov 16–22) — Case B on real code
 
-- [ ] 5. Record B3 in real time: Sysop "skip review" post → agent refusal; `[X] force done` →
+- [ ] 5. Record B3 in real time: Sysop `[R]` "skip review" post → agent refusal; `[X] force done` →
       ACCESS DENIED (R3.3)
 - [ ] 6. Record B1 and B2 on a single `#websites` design stage (R3.1, R3.2)
 - [ ] 7. PBT run output for R1.9 captured for the montage (R1.7)

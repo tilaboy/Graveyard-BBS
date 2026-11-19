@@ -601,11 +601,12 @@ function bye(): string[] {
 
 const HELP: Record<string, string> = {
   login: "any key: enter",
-  tree: "↑↓ move · → open · ← fold · Enter full thread · N new task · B W S D L U · Esc menu",
+  tree: "↑↓ move · → open · ← fold · Enter full thread · R reply · N new task · B W S D L U · Esc menu",
   menu: "KEYS (no mouse): B boards W who S sysop D doors L log U news N new task",
   boards: "↑↓ select · Enter open · N new task · Esc back",
   threads: "↑↓ select · Enter open · N new task · Esc back",
-  thread: "↑↓ scroll · A answer · P approve · N deny · X force done · Esc back",
+  thread:
+    "↑↓ scroll · R reply · A answer · P approve · N deny · X force done · Esc back",
   who: "N new task · Esc back",
   sysop:
     "↑↓ select · A answer · P approve · N deny · Enter open thread · Esc back",
@@ -633,7 +634,7 @@ function helpFor(s: State, v: View): string {
 function helpBase(s: State, v: View): string {
   if ((v.screen === "thread" || v.screen === "sysop") && !denyScreen(s, v))
     return v.screen === "thread"
-      ? "↑↓ scroll · N new task · X force done · Esc back"
+      ? "↑↓ scroll · R reply · N new task · X force done · Esc back"
       : "↑↓ select · N new task · Enter open thread · Esc back";
   return HELP[v.screen] ?? "";
 }
