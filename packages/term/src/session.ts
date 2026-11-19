@@ -415,12 +415,16 @@ export class Session {
       );
       at(rows[j]?.key ?? r.key);
     } else if (k === "right") {
-      if (r.kind === "board" || r.kind === "task") open[r.key] = true;
+      if (r.kind === "board" || r.kind === "task" || r.hidden)
+        open[r.key] = true;
       at(r.key);
     } else if (k === "left") {
       const task = `t:${r.thread ?? ""}`;
       if (r.kind === "board") {
         open[r.key] = false;
+        at(r.key);
+      } else if (r.kind === "post" && open[r.key]) {
+        open[r.key] = false; // an unfolded long post folds back first
         at(r.key);
       } else if (r.kind === "post" || (r.kind === "task" && open[task])) {
         open[task] = false;
@@ -428,7 +432,8 @@ export class Session {
       } else at(`b:${r.board}`); // a folded task or "… more": go up to the board
     } else if (k === "enter") {
       at(r.key);
-      if (r.thread) this.go("thread", { thread: r.thread });
+      if (r.hidden) open[r.key] = true;
+      else if (r.thread) this.go("thread", { thread: r.thread });
       else if (r.kind === "more") this.go("threads", { board: r.board });
       else open[r.key] = open[r.key] === false;
     } else return false;

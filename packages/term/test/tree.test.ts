@@ -108,12 +108,12 @@ describe("tree keys", () => {
   it("→ opens a task's posts, ← on a post folds its task, ← again goes to the board and folds it", () => {
     const { s, screen, cursor } = start();
     s.key(DOWN + RIGHT);
-    expect(screen()).toContain("#1 moderator-1");
+    expect(screen()).toContain("#1  20:00  moderator-1");
     s.key(DOWN);
-    expect(cursor()).toContain("#1 moderator-1");
+    expect(cursor()).toContain("#1  20:00  moderator-1");
     s.key(LEFT);
     expect(cursor()).toContain("Small door game");
-    expect(screen()).not.toContain("#1 moderator-1");
+    expect(screen()).not.toContain("#1  20:00  moderator-1");
     s.key(LEFT);
     expect(cursor()).toContain("#arcade");
     s.key(LEFT);

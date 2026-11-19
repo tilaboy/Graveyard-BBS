@@ -9,20 +9,32 @@
       html,
       body {
         margin: 0;
+        height: 100%;
         background: #000;
         color: #b8b8b8;
         font: 14px monospace;
       }
+      body {
+        display: flex;
+        flex-direction: column;
+      }
       #runs {
         padding: 4px 8px;
+      }
+      #runs:empty {
+        display: none;
       }
       #runs a {
         color: #ff8700;
         margin-right: 12px;
       }
+      /* The terminal fills what is left of the page; below 80x24 it scrolls instead. */
       #term {
-        display: inline-block;
+        flex: 1;
+        min-height: 0;
+        overflow: auto;
         padding: 4px;
+        box-sizing: border-box;
       }
     </style>
   </head>

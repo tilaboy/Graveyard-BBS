@@ -46,6 +46,7 @@ export const COLOR = {
   pass: "92", // poison green
   witch: "35", // witch purple (TRIED, lessons)
   ask: "93", // candle yellow
+  path: "36", // ectoplasm cyan (file paths in posts)
   dim: "2",
   bold: "1",
   blink: "5",

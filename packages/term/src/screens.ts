@@ -31,6 +31,7 @@ import {
   type View,
 } from "./state.js";
 import { COLOR, EMOJI, MOTION, POST_COLOR, STATUS, WORDS } from "./theme.js";
+import { formatBody } from "./format.js";
 import { z } from "zod";
 
 const ART = [
@@ -200,12 +201,26 @@ const EvidenceView = z.object({
   commit: z.string().nullable(),
 });
 
+/**
+ * How one event reads. `compact` posts are one line (`head`, plain text) whose `body` holds the
+ * details; the full thread shows them dim, the tree only when unfolded.
+ */
+interface Post {
+  head: string;
+  body: string[];
+  style: string;
+  compact?: "dim" | "refusal";
+  /** The ASK an ANSWER replies to, shown as one `>` line. */
+  quote?: string;
+  /** Door output: wrapped as is, never reformatted (R5.6). */
+  plain?: boolean;
+}
+
+const SERVER_DENIED = /^\s*☠\s*ACCESS DENIED\s*·\s*(.*)$/;
+const STEER = "steer: ";
+
 /** Header text, body text and style for one event. Door EVIDENCE stays plain (R5.6). */
-function describe(
-  e: Event,
-  s: State,
-  v: View,
-): { head: string; body: string[]; style: string } {
+function describe(e: Event, s: State, v: View): Post {
   const style = POST_COLOR[e.type];
   switch (e.type) {
     case "ASK": {
@@ -221,10 +236,8 @@ function describe(
       const ask = s.events.find((x) => x.id === e.body.ask_id);
       return {
         head: `${EMOJI.sysop} ANSWER`,
-        body: [
-          ...(ask && ask.type === "ASK" ? [`> ${ask.body.text}`] : []),
-          e.body.text,
-        ],
+        body: [e.body.text],
+        ...(ask && ask.type === "ASK" ? { quote: ask.body.text } : {}),
         style,
       };
     }
@@ -243,6 +256,7 @@ function describe(
           head: `${EMOJI.evidence} EVIDENCE`,
           body: [e.body.text],
           style,
+          plain: true,
         };
       const ok = ev.data.exit_code === 0;
       return {
@@ -251,6 +265,7 @@ function describe(
           `door ${ev.data.door} · ${ev.data.duration_ms} ms${ev.data.commit ? ` · commit ${ev.data.commit.slice(0, 7)}` : ""}`,
         ],
         style,
+        plain: true,
       };
     }
     case "TRIED":
@@ -259,28 +274,55 @@ function describe(
         body: [`${e.body.text} (${e.body.reason})`],
         style,
       };
-    case "STATUS":
+    case "STATUS": {
+      const t = STATUS[e.body.to];
       return {
-        head: `${statusLine(e.body.to)} ${sgr(COLOR.dim, `(was ${e.body.from}${e.body.reason ? `, ${e.body.reason}` : ""})`)}`,
+        head: `STATUS ${t.emoji ? `${t.emoji} ` : ""}${e.body.to} · ${t.phrase} (was ${e.body.from}${e.body.reason ? `, ${e.body.reason}` : ""})`,
         body: [],
         style,
+        compact: "dim",
       };
+    }
     case "GRANT":
       return {
         head: `lock ${e.body.lock} granted, fencing token #${e.body.token}`,
         body: [],
         style,
+        compact: "dim",
       };
     case "QUEUE":
       return {
         head: `lock ${e.body.lock}: Door busy — queued at #${e.body.position}`,
         body: [],
         style,
+        compact: "dim",
       };
     case "RELEASE":
-      return { head: `lock ${e.body.lock} released`, body: [], style };
-    case "NOTE":
+      return {
+        head: `lock ${e.body.lock} released`,
+        body: [],
+        style,
+        compact: "dim",
+      };
+    case "NOTE": {
+      const [first = "", ...rest] = e.body.text.split("\n");
+      const denied = e.caller === "server" && SERVER_DENIED.exec(first);
+      if (denied)
+        return {
+          head: `${EMOJI.refusal} ACCESS DENIED · ${denied[1]!.replace(/\s+/g, " ").trim()}`,
+          body: rest.map((l) => l.trim()).filter(Boolean),
+          style: COLOR.error,
+          compact: "refusal",
+        };
+      // A Sysop [R] reply is stored as `steer: <text>`; show it as the reply it is.
+      if (e.body.text.startsWith(STEER))
+        return {
+          head: `${EMOJI.sysop} ${roleOf(e.caller) === "sysop" ? "Sysop reply" : "REPLY"}`,
+          body: [e.body.text.slice(STEER.length)],
+          style: COLOR.sysop,
+        };
       return { head: "NOTE", body: [e.body.text], style };
+    }
     case "MILESTONE":
       return { head: "MILESTONE", body: [e.body.text], style };
     case "TASK":
@@ -305,20 +347,54 @@ export function threadLines(s: State, v: View): string[] {
     "",
   ];
   // Posts are numbered per thread (1, 2, 3 …); the global log seq stays in the Log screen.
+  let prev: Post | undefined;
   postsOf(s, t.thread_id).forEach((e, i) => {
     const d = describe(e, s, v);
     // New posts fade in like mist: dim first, then normal.
     const mist =
       progress(v, `post:${e.seq}`, MOTION.mist) < 0.5 ? `${COLOR.dim};` : "";
-    const who = e.caller === "server" ? "server" : e.caller;
-    out.push(
-      `  ${sgr(COLOR.dim, `#${i + 1} ${hhmmss(e.at)} ${pad(who, 12)}`)} ${sgr(mist + d.style, d.head)}`,
-    );
-    for (const b of d.body)
-      for (const l of wrap(stripUnsafe(b), w))
-        out.push(`      ${sgr(mist + d.style, l)}`);
+    // A blank line between posts; runs of one-line notes stay together.
+    if (prev && !(prev.compact && d.compact)) out.push("");
+    out.push(`  ${postHead(e, i + 1, d, mist)}`);
+    for (const l of postBody(d, w, mist)) out.push(`${BODY_IND}${l}`);
+    prev = d;
   });
   return out;
+}
+
+const HANDLE_W = 12;
+const BODY_IND = "     ";
+/** Tree posts show this many body lines until unfolded. */
+export const POST_LINES = 6;
+const hhmm = (ms: number): string => new Date(ms).toISOString().slice(11, 16);
+
+/** A handle too long for its column shows as its role; Who's online keeps the full handle. */
+export const shortHandle = (h: string): string =>
+  h.length > HANDLE_W && roleOf(h) !== "caller" ? roleOf(h) : h;
+
+/** `#n  HH:MM  caller  <kind>`; a compact post is that one dim (or red) line. */
+function postHead(e: Event, n: number, d: Post, mist: string): string {
+  const meta = `#${n}  ${hhmm(e.at)}  ${pad(shortHandle(e.caller), HANDLE_W)}`;
+  if (d.compact)
+    return sgr(
+      d.compact === "refusal" ? COLOR.error : COLOR.dim,
+      `${meta} ${d.head}`,
+    );
+  return `${sgr(COLOR.dim, meta)} ${sgr(mist + d.style, d.head)}`;
+}
+
+/** Body lines, at most `w` cells (a long path may run over rather than break). */
+function postBody(d: Post, w: number, mist: string): string[] {
+  if (d.compact) return d.body.map((l) => sgr(COLOR.dim, cut(l, w)));
+  const style = mist + d.style;
+  return [
+    ...(d.quote ? [sgr(COLOR.dim, cut(`> ${d.quote}`, w))] : []),
+    ...d.body.flatMap((b) =>
+      d.plain
+        ? wrap(stripUnsafe(b), w).map((l) => sgr(style, l))
+        : formatBody(stripUnsafe(b), d.head, w, style),
+    ),
+  ];
 }
 
 /** The posts a thread shows, in order; their index + 1 is the per-thread post number. */
@@ -340,6 +416,10 @@ export interface TreeRow {
   board: string;
   thread?: string;
   line: string;
+  /** Lines drawn under `line` (a post's body); the cursor stays on `line`. */
+  lines?: string[];
+  /** Body lines a folded post hides; 0 when all show. */
+  hidden?: number;
 }
 
 const LANE = 8;
@@ -399,15 +479,29 @@ export function treeRows(s: State, v: View): TreeRow[] {
       if (!tOpen) return;
       postsOf(s, t.thread_id).forEach((e, i) => {
         const d = describe(e, s, v);
-        const text = d.body[0]
-          ? ` ${cut(d.body[0], Math.max(10, v.cols - 50 - 4 * depth))}`
-          : "";
+        const key = `p:${t.thread_id}:${e.seq}`;
+        const pind = `${ind}      `;
+        const body = postBody(d, Math.max(20, v.cols - 2 - pind.length), "");
+        // Long posts show their first lines; → or Enter unfolds the rest. One spare line just shows.
+        const limit = d.compact ? 0 : POST_LINES;
+        const hidden =
+          open[key] === true || body.length <= limit + (d.compact ? 0 : 1)
+            ? 0
+            : body.length - limit;
+        const more = `${pind}… ${hidden} more line${hidden === 1 ? "" : "s"} (→)`;
         out.push({
-          key: `p:${t.thread_id}:${e.seq}`,
+          key,
           kind: "post",
           board: b,
           thread: t.thread_id,
-          line: `${ind}    ${sgr(COLOR.dim, `#${i + 1} ${pad(e.caller, 12)}`)} ${sgr(d.style, d.head)}${sgr(d.style, text)}`,
+          line: `${ind}    ${postHead(e, i + 1, d, "")}`,
+          lines: hidden
+            ? [
+                ...body.slice(0, limit).map((l) => pind + l),
+                sgr(COLOR.dim, more),
+              ]
+            : body.map((l) => pind + l),
+          hidden,
         });
       });
       for (const k of kids) taskRow(k, depth + 1);
@@ -450,20 +544,19 @@ function tree(s: State, v: View, room: number): string[] {
   if (rows.length === 0)
     return [head, "", `  ${EMOJI.idle} No boards yet. Press N to post a task.`];
   const i = treeCursor(rows, v);
+  const lines = rows.flatMap((r, j) => [
+    `${j === i ? sgr(COLOR.bold, "▶ ") : "  "}${r.line}`,
+    ...(r.lines ?? []).map((l) => `  ${l}`),
+  ]);
+  const at = rows
+    .slice(0, i)
+    .reduce((n, r) => n + 1 + (r.lines?.length ?? 0), 0);
   const fit = Math.max(1, room - 2);
   const start = Math.max(
     0,
-    Math.min(i - Math.floor(fit / 2), rows.length - fit),
+    Math.min(at - Math.floor(fit / 2), lines.length - fit),
   );
-  return [
-    head,
-    "",
-    ...rows
-      .slice(start, start + fit)
-      .map(
-        (r, j) => `${start + j === i ? sgr(COLOR.bold, "▶ ") : "  "}${r.line}`,
-      ),
-  ];
+  return [head, "", ...lines.slice(start, start + fit)];
 }
 
 // ---- who / sysop / doors / bulletins / log / deck --------------------------
@@ -515,8 +608,8 @@ function sysop(s: State, v: View): string[] {
       : []),
     ...asks.flatMap((a, i) => [
       `${sel(v, i)}${sgr(`${COLOR.ask};${flick}`, `${EMOJI.ask} ${a.thread}`)} ${sgr(COLOR.dim, `from ${a.caller} · ask ${a.id.slice(0, 8)}`)}`,
-      ...wrap(stripUnsafe(a.text), v.cols - 8).map(
-        (l) => `      ${sgr(COLOR.ask, l)}`,
+      ...formatBody(stripUnsafe(a.text), EMOJI.ask, v.cols - 8, COLOR.ask).map(
+        (l) => `      ${l}`,
       ),
     ]),
   ];

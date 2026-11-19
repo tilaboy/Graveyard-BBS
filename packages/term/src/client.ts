@@ -2,15 +2,19 @@
 import { Terminal } from "@xterm/xterm";
 import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { createAudio } from "./audio.js";
+import { fitSize, MIN_COLS, MIN_ROWS } from "./fit.js";
 import { Session } from "./session.js";
 import { LiveSource, ReplaySource, type Source } from "./source.js";
 
 const mode = document.body.dataset["mode"] === "replay" ? "replay" : "live";
 const params = new URLSearchParams(location.hash.slice(1));
 
+const box = document.getElementById("term")!;
 const term = new Terminal({
-  cols: 100,
-  rows: 30,
+  cols: MIN_COLS,
+  rows: MIN_ROWS,
+  // Every frame repaints the whole screen, so there is nothing to scroll back to.
+  scrollback: 0,
   allowProposedApi: true,
   cursorBlink: false,
   fontFamily:
@@ -20,10 +24,40 @@ const term = new Terminal({
 });
 term.loadAddon(new Unicode11Addon());
 term.unicode.activeVersion = "11";
-term.open(document.getElementById("term")!);
+term.open(box);
 term.focus();
 // A click anywhere on the page returns keyboard focus to the terminal.
 document.addEventListener("click", () => term.focus());
+
+let session: Session | undefined;
+
+/** Fill the page: cell size from the drawn screen, space from the #term box. */
+function fit(): void {
+  const screen = term.element?.querySelector(".xterm-screen");
+  if (!screen) return;
+  const r = screen.getBoundingClientRect();
+  const cs = getComputedStyle(box);
+  const px = (p: string) => parseFloat(p) || 0;
+  const { cols, rows } = fitSize(
+    {
+      width: box.clientWidth - px(cs.paddingLeft) - px(cs.paddingRight),
+      height: box.clientHeight - px(cs.paddingTop) - px(cs.paddingBottom),
+    },
+    { width: r.width / term.cols, height: r.height / term.rows },
+  );
+  if (cols === term.cols && rows === term.rows) return;
+  term.resize(cols, rows);
+  session?.resize(cols, rows);
+}
+fit();
+let queued = 0;
+const refit = () => {
+  cancelAnimationFrame(queued);
+  queued = requestAnimationFrame(fit);
+};
+// The box follows the window (and the app page's iframe); a late web font changes the cell size.
+new ResizeObserver(refit).observe(box);
+void document.fonts?.ready.then(refit);
 
 async function pickSource(): Promise<
   { source: Source; base: string } | string
@@ -59,8 +93,10 @@ void (async () => {
   const picked = await pickSource();
   if (typeof picked === "string") return term.write(`\r\n  ${picked}\r\n`);
   const audio = createAudio();
-  const session = new Session({
+  const live = new Session({
     source: picked.source,
+    cols: term.cols,
+    rows: term.rows,
     publishedBase: picked.base,
     reducedMotion: matchMedia("(prefers-reduced-motion: reduce)").matches,
     write: (s) => term.write(s),
@@ -77,8 +113,9 @@ void (async () => {
         );
     },
   });
+  session = live;
   picked.source.start();
-  term.onData((d) => session.key(d));
-  setInterval(() => session.needsTick() && session.tick(), 100);
-  session.paint();
+  term.onData((d) => live.key(d));
+  setInterval(() => live.needsTick() && live.tick(), 100);
+  live.paint();
 })();

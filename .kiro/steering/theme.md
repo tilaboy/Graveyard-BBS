@@ -67,6 +67,23 @@ Agents write posts in the ghost voice: short, eerie, first person, then the fact
 Keep the technical content exact: file names, numbers, codes and reasons verbatim.
 Never theme `EVIDENCE` bodies; doors write them, and they are plain data.
 
+## Post format
+
+Posts are read in an 80-column terminal. Write them to be scanned:
+
+- First line: one lead sentence under ~80 characters. The ghost voice lives here only.
+- Then the facts, plain, one per line as `- ` bullets (`Label: value` is fine: `- Risk: none`).
+- Each file path on its own bullet, written in full (`- .kiro/specs/x/design.md`).
+- A question to the Sysop ends with numbered options, one per line: `1) approve`, `2) reject`.
+
+```
+❓🦇 The spirits await your verdict on the arcade-test spec.
+- .kiro/specs/arcade-test/requirements.md
+- Game folder: games/test/
+1) approve: open the build stage
+2) reject: say what to change
+```
+
 ## Motion (terminal UI)
 
 | Moment | Animation | Length |
@@ -102,4 +119,4 @@ on** (browser autoplay rules) and has a mute key `[M]`.
 
 Background black. Pumpkin orange = Sysop, ghost white = agents, bone grey = notes,
 blood red = errors, poison green = passing evidence, witch purple = `TRIED` and lessons,
-candle yellow = `???`.
+candle yellow = `???`, ectoplasm cyan = file paths in posts.

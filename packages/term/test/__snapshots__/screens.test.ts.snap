@@ -260,7 +260,7 @@ exports[`snapshots: every screen (task 9) > sysop  1`] = `
 " GRAVEYARD BBS · sysop queue                                                          sound off [M] 
   Sysop queue — 1 waiting
 ▶ ❓🦇 websites-landing from builder-1 · ask e6
-      ❓🦇 Dark theme or blood-red? (answer A or B)
+      Dark theme or blood-red? (answer A or B)
 
 
 
@@ -293,23 +293,23 @@ exports[`snapshots: every screen (task 9) > thread arcade-snake 1`] = `
   arcade-snake  ✅ done           laid to rest
   owner builder-2 · turns left 50 · seconds left 3600
 
-  #1 20:00:08 moderator-1  TASK
-      Small door game
-  #2 20:00:11 builder-2    🔥 running        rises from the grave (was pending)
-  #3 20:00:12 server       🧪 EVIDENCE [exit 0]
-      door run_tests · 42 ms · commit abcdef1
-  #4 20:00:13 server       🧪 EVIDENCE [exit 0]
-      door publish · 42 ms · commit abcdef1
-  #5 20:00:14 builder-2    🔮 awaiting-review awaits the reviewer (was running)
-  #6 20:00:15 reviewer-1   REVIEW pass
-      ok
-  #7 20:00:16 reviewer-1   ✅ done           laid to rest (was awaiting-review)
+  #1  20:00  moderator-1  TASK
+     Small door game
 
+  #2  20:00  builder-2    STATUS 🔥 running · rises from the grave (was pending)
 
+  #3  20:00  server       🧪 EVIDENCE [exit 0]
+     door run_tests · 42 ms · commit abcdef1
 
+  #4  20:00  server       🧪 EVIDENCE [exit 0]
+     door publish · 42 ms · commit abcdef1
 
+  #5  20:00  builder-2    STATUS 🔮 awaiting-review · awaits the reviewer (was running)
 
+  #6  20:00  reviewer-1   REVIEW pass
+     ok
 
+  #7  20:00  reviewer-1   STATUS ✅ done · laid to rest (was awaiting-review)
 
 
 
@@ -325,19 +325,19 @@ exports[`snapshots: every screen (task 9) > thread websites-landing 1`] = `
   websites-landing  🔒 blocked        trapped in the crypt (ask:e6)
   owner builder-1 · turns left 50 · seconds left 3600
 
-  #1 20:00:01 moderator-1  TASK
-      Haunted landing page
-  #2 20:00:04 builder-1    🔥 running        rises from the grave (was pending)
-  #3 20:00:05 builder-1    MILESTONE
-      🔥 The signup form has taken shape in the dark. Files: form.html, api.ts.
-  #4 20:00:06 builder-1    ❓🦇 ASK (unanswered) the spirits summon you
-      ❓🦇 Dark theme or blood-red? (answer A or B)
-  #5 20:00:07 builder-1    🔒 blocked        trapped in the crypt (was running, ask:e6)
+  #1  20:00  moderator-1  TASK
+     Haunted landing page
 
+  #2  20:00  builder-1    STATUS 🔥 running · rises from the grave (was pending)
 
+  #3  20:00  builder-1    MILESTONE
+     🔥 The signup form has taken shape in the dark.
+     Files: form.html, api.ts.
 
+  #4  20:00  builder-1    ❓🦇 ASK (unanswered) the spirits summon you
+     Dark theme or blood-red? (answer A or B)
 
-
+  #5  20:00  builder-1    STATUS 🔒 blocked · trapped in the crypt (was running, ask:e6)
 
 
 
