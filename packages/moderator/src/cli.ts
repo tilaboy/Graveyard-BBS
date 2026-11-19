@@ -19,6 +19,7 @@ import {
   type State,
 } from "./planner.js";
 import { KiroCliRunner, KiroCrewRunner } from "./runner.js";
+import { worktreeOf } from "./worktree.js";
 
 const USAGE = `graveyard-moderator step [--runner crew|cli] [--boards DIR] [--data-dir DIR] [--project NAME]
 graveyard-moderator agent <thread> <agent-id>     remember a Kiro Crew agent id (for steering)
@@ -121,7 +122,12 @@ async function main(argv: string[]) {
     };
     const r = await execute(
       [action],
-      { bbs, runner: crew, now: Date.now },
+      {
+        bbs,
+        runner: crew,
+        now: Date.now,
+        cwdOf: (t) => worktreeOf(dataDir, process.cwd(), p.tasks, t),
+      },
       values.project,
     );
     console.log(
@@ -159,10 +165,8 @@ async function main(argv: string[]) {
       bbs,
       runner,
       now: Date.now,
-      cwdOf: (t) => {
-        const d = join(dataDir, "wt", t);
-        return existsSync(d) ? d : undefined;
-      },
+      cwdOf: async (t) =>
+        worktreeOf(dataDir, process.cwd(), fold(await bbs.events()).tasks, t),
       tasksMdOf: (root) => tasksMdOf(dataDir, root),
     },
     opts,

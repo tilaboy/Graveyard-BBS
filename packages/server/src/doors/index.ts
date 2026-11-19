@@ -11,7 +11,7 @@ import {
 import { z } from "zod";
 import { boardOf } from "../boards.js";
 import { toolFail, type Service, type ToolError } from "../commands.js";
-import { ensureWorktree, headSha } from "../worktree.js";
+import { ensureWorktree, headSha, rootOf } from "../worktree.js";
 import { deploy } from "./deploy.js";
 import { gitMerge } from "./git-merge.js";
 import { imageGen } from "./image-gen.js";
@@ -95,7 +95,7 @@ export async function runDoor(
   const wt = await ensureWorktree(
     svc.config.repo,
     svc.config.dataDir,
-    threadId,
+    rootOf(svc.p.tasks, threadId),
   );
   if (typeof wt !== "string")
     return toolFail(

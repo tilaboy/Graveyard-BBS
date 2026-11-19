@@ -40,6 +40,26 @@ export function run(
 export const worktreePath = (dataDir: string, threadId: string): string =>
   join(dataDir, "wt", threadId);
 
+/**
+ * The top task of a thread: stage and split threads (design, build, review…) follow `parent`
+ * up to the task the Sysop posted. They share its worktree, branch and slug, so the builder
+ * sees the designer's spec and `games/<slug>` is the game's real folder.
+ */
+export function rootOf(
+  tasks: Record<string, { parent?: string } | undefined>,
+  threadId: string,
+): string {
+  let t = threadId;
+  const seen = new Set<string>();
+  while (!seen.has(t)) {
+    seen.add(t);
+    const up = tasks[t]?.parent;
+    if (!up || !tasks[up]) break;
+    t = up;
+  }
+  return t;
+}
+
 /** R4.1: `git worktree add <dataDir>/wt/<task-id> -b gy/<task-id>`, created on first use. */
 export async function ensureWorktree(
   repo: string,

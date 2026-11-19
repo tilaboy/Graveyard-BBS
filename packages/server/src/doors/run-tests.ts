@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { slugOf } from "../boards.js";
-import { run } from "../worktree.js";
+import { rootOf, run } from "../worktree.js";
 import { defineDoor } from "./types.js";
 
 /** R4.1 / R4.4: run the board's test command inside the thread's worktree, with a timeout. */
@@ -10,9 +10,10 @@ export const runTests = defineDoor({
     timeout_s: z.number().positive().max(900).default(120),
   }),
   async run(ctx, args) {
+    const slug = slugOf(rootOf(ctx.svc.p.tasks, ctx.thread_id));
     const cmd =
       ctx.svc.config.testCommand ??
-      ctx.board.testCommand?.replaceAll("<slug>", slugOf(ctx.thread_id));
+      ctx.board.testCommand?.replaceAll("<slug>", slug);
     if (!cmd)
       return {
         exitCode: 1,

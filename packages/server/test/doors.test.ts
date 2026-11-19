@@ -55,6 +55,52 @@ const lastEvidence = (svc: Service, id: string) => {
 };
 
 describe("run_tests door (R4.1, R4.2)", () => {
+  it("a stage thread tests its top task's game: games/<root slug>, in the root's worktree", async () => {
+    const env = makeEnv({ testCommand: undefined });
+    const svc = env.open();
+    svc.exec({
+      type: "create_task",
+      actor: sysop,
+      thread_id: "arcade-test",
+      text: "Spacewar",
+    });
+    svc.exec({
+      type: "create_task",
+      actor: sysop,
+      thread_id: "arcade-test-build",
+      text: "build: Spacewar",
+      assigned: builder.handle,
+      parent: "arcade-test",
+    });
+    svc.exec({
+      type: "issue_packet",
+      actor: SERVER,
+      thread_id: "arcade-test-build",
+    });
+    svc.exec({
+      type: "ack",
+      actor: builder,
+      thread_id: "arcade-test-build",
+      packet_id: svc.p.tasks["arcade-test-build"]!.packet!,
+    });
+    svc.exec({
+      type: "set_status",
+      actor: builder,
+      thread_id: "arcade-test-build",
+      to: "running",
+      gate_ok: false,
+    });
+    await runDoor(svc, doors, builder, "arcade-test-build", "run_tests", {});
+    const ev = lastEvidence(svc, "arcade-test-build");
+    expect(String(ev.extra["command"])).toContain("games/test");
+    expect(String(ev.extra["command"])).not.toContain("games/test-build");
+    expect(existsSync(join(env.config.dataDir, "wt", "arcade-test"))).toBe(
+      true,
+    );
+    expect(
+      existsSync(join(env.config.dataDir, "wt", "arcade-test-build")),
+    ).toBe(false);
+  });
   it("runs in the worktree on branch gy/<id> and writes EVIDENCE with exit code, sha and a stored log", async () => {
     const env = makeEnv();
     const svc = env.open();
