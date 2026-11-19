@@ -147,7 +147,12 @@ describe("LiveSource", () => {
   const history = w.events.slice(0, 10);
   const calls: { url: string; body?: string }[] = [];
   const reply = (v: unknown) =>
-    Promise.resolve({ json: async () => v } as Response);
+    Promise.resolve({
+      ok: true,
+      status: 200,
+      json: async () => v,
+      text: async () => JSON.stringify(v),
+    } as Response);
   const fetchFake = ((url: string, init?: { body?: string }) => {
     calls.push({ url, ...(init?.body ? { body: init.body } : {}) });
     if (url.includes("/api/events")) return reply(history);
@@ -220,6 +225,64 @@ describe("LiveSource", () => {
           c.body === JSON.stringify({ thread_id: "t", ask_id: "a" }),
       ),
     ).toBe(true);
+  });
+  it("never reports success for a non-ok, malformed or unreachable reply (createTask)", async () => {
+    const act = (f: typeof fetch) =>
+      new LiveSource({
+        baseUrl: "http://h",
+        token: "tok",
+        fetch: f,
+        WebSocket: FakeWS as never,
+      }).act({ type: "createTask", thread: "web-x", text: "x" });
+    const res = (status: number, body: string) =>
+      (() =>
+        Promise.resolve({
+          ok: status < 300,
+          status,
+          text: async () => body,
+        } as Response)) as unknown as typeof fetch;
+    expect(await act(res(500, '{"statusCode":500}'))).toMatchObject({
+      ok: false,
+      error: { code: "BAD_REPLY" },
+    });
+    expect(await act(res(200, "<html>"))).toMatchObject({ ok: false });
+    expect(await act(res(200, "{}"))).toMatchObject({ ok: false });
+    expect(
+      await act((() => Promise.reject(new Error("down"))) as never),
+    ).toMatchObject({ ok: false, error: { code: "NETWORK" } });
+    expect(await act(fetchFake)).toEqual({ ok: true });
+    expect(
+      calls.some(
+        (c) =>
+          c.url === "http://h/api/tools/bbs_create_task" &&
+          c.body === JSON.stringify({ thread_id: "web-x", text: "x" }),
+      ),
+    ).toBe(true);
+  });
+  it("works with a browser-style fetch that rejects an unbound `this`", async () => {
+    const orig = globalThis.fetch;
+    globalThis.fetch = function (this: unknown) {
+      if (this !== undefined && this !== globalThis)
+        throw new TypeError("Illegal invocation");
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        text: async () => '{"ok":true,"value":{}}',
+        json: async () => [],
+      } as Response);
+    } as typeof fetch;
+    try {
+      const src = new LiveSource({
+        baseUrl: "http://h",
+        token: "tok",
+        WebSocket: FakeWS as never,
+      });
+      expect(
+        await src.act({ type: "createTask", thread: "web-x", text: "x" }),
+      ).toEqual({ ok: true });
+    } finally {
+      globalThis.fetch = orig;
+    }
   });
   it("state() works before start", () => {
     expect(stateOf(w).events.length).toBe(22);

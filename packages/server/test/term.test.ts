@@ -131,4 +131,44 @@ describe("spec 04: the terminal on a real server", () => {
     expect(svc.p.tasks["websites-live"]?.answered).toHaveLength(1);
     session.dispose();
   });
+
+  it("[N] new task: the Sysop types board, title, body; the server creates a pending thread", async () => {
+    const src = new LiveSource({ baseUrl: server.url, token: sysopTok });
+    const out: string[] = [];
+    const session = new Session({
+      source: src,
+      write: (s) => out.push(s),
+      reducedMotion: true,
+    });
+    src.start();
+    session.key("xn"); // leave login, new task
+    session.key("websites\rOpen the crypt\rBring candles\r");
+    await until(() => svc.p.tasks["websites-open-the-crypt"] !== undefined);
+    expect(svc.p.tasks["websites-open-the-crypt"]?.status).toBe("pending");
+    expect(svc.p.tasks["websites-open-the-crypt"]?.text).toBe(
+      "Open the crypt — Bring candles",
+    );
+    await until(() =>
+      plain(out.at(-1) ?? "").includes("Created websites-open"),
+    );
+    session.dispose();
+    src.stop();
+  });
+
+  it("[N] new task by a non-Sysop is refused with ACCESS DENIED", async () => {
+    const src = new LiveSource({ baseUrl: server.url, token: builderTok });
+    const out: string[] = [];
+    const session = new Session({
+      source: src,
+      write: (s) => out.push(s),
+      reducedMotion: true,
+    });
+    session.key("xn");
+    session.key("websites\rNot allowed\r\r");
+    await until(() => plain(out.at(-1) ?? "").includes("ACCESS DENIED"));
+    expect(plain(out.at(-1) ?? "")).toContain("ROLE_DENIED");
+    expect(svc.p.tasks["websites-not-allowed"]).toBeUndefined();
+    session.dispose();
+    src.stop();
+  });
 });

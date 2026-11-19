@@ -24,7 +24,8 @@ import {
 export type Action =
   | { type: "answer"; thread: string; ask: string; text: string }
   | { type: "approve"; thread: string; ask: string }
-  | { type: "forceDone"; thread: string };
+  | { type: "forceDone"; thread: string }
+  | { type: "createTask"; thread: string; text: string };
 
 export interface RefusalError {
   code: string;
@@ -247,7 +248,8 @@ export class LiveSource extends Base implements Source {
 
   constructor(private readonly o: LiveOptions) {
     super();
-    this.f = o.fetch ?? fetch;
+    // A native fetch throws "Illegal invocation" when called as a method of this object.
+    this.f = o.fetch ?? ((...a) => globalThis.fetch(...a));
     this.WS = o.WebSocket ?? WebSocket;
     this.now = o.now ?? Date.now;
   }
@@ -343,17 +345,47 @@ export class LiveSource extends Base implements Source {
   async act(a: Action): Promise<ActResult> {
     const [path, body] =
       a.type === "answer"
-        ? ["answer", { thread_id: a.thread, ask_id: a.ask, text: a.text }]
+        ? ["sysop/answer", { thread_id: a.thread, ask_id: a.ask, text: a.text }]
         : a.type === "approve"
-          ? ["approve", { thread_id: a.thread, ask_id: a.ask }]
-          : ["force-done", { thread_id: a.thread }];
-    const res = await this.f(`${this.o.baseUrl}/api/sysop/${path}`, {
-      method: "POST",
-      headers: this.headers(),
-      body: JSON.stringify(body),
-    });
-    const r = Refusal.safeParse(await res.json());
-    return r.success ? { ok: false, error: r.data.error } : { ok: true };
+          ? ["sysop/approve", { thread_id: a.thread, ask_id: a.ask }]
+          : a.type === "createTask"
+            ? ["tools/bbs_create_task", { thread_id: a.thread, text: a.text }]
+            : ["sysop/force-done", { thread_id: a.thread }];
+    let res: Response;
+    try {
+      res = await this.f(`${this.o.baseUrl}/api/${path}`, {
+        method: "POST",
+        headers: this.headers(),
+        body: JSON.stringify(body),
+      });
+    } catch (e) {
+      return fault("NETWORK", `server unreachable: ${String(e)}`);
+    }
+    const j = safeJson(await res.text().catch(() => ""));
+    const r = Refusal.safeParse(j);
+    if (r.success) return { ok: false, error: r.data.error };
+    // Only an explicit {ok:true} on a 2xx counts. Anything else is a failure, never a silent success.
+    if (res.ok && z.object({ ok: z.literal(true) }).safeParse(j).success) {
+      await this.catchUp();
+      return { ok: true };
+    }
+    return fault(
+      "BAD_REPLY",
+      `server answered HTTP ${res.status} without ok:true`,
+    );
+  }
+
+  /** Pull events we have not seen, so the screen updates even if the socket lags. */
+  private async catchUp(): Promise<void> {
+    try {
+      const last = this.events.at(-1)?.seq ?? 0;
+      const res = await this.f(`${this.o.baseUrl}/api/events?after=${last}`, {
+        headers: this.headers(),
+      });
+      this.apply(z.array(EventSchema).parse(await res.json()), true);
+    } catch {
+      // The socket feed still delivers it.
+    }
   }
 
   stop(): void {
@@ -362,6 +394,16 @@ export class LiveSource extends Base implements Source {
     this.ws?.close();
   }
 }
+
+const fault = (code: string, message: string): ActResult => ({
+  ok: false,
+  error: {
+    code,
+    message,
+    hint: "Nothing was saved. Check the server and try again.",
+    voice: "The spirits are silent.",
+  },
+});
 
 function safeJson(s: string): unknown {
   try {

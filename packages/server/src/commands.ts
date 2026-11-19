@@ -51,6 +51,7 @@ export type Evidence = z.infer<typeof EvidenceSchema>;
 /** R1 + design: the single entry point. MCP, HTTP, CLI and doors all go through here, so rules are enforced once. */
 export class Service {
   p: Projections;
+  private lastSeq = 0;
   private readonly listeners = new Set<(e: Event) => void>();
 
   constructor(
@@ -61,7 +62,9 @@ export class Service {
     private readonly newId: () => string = randomUUID,
   ) {
     // R1.1: rebuild projections by folding the log.
-    this.p = foldFrom(emptyProjections(), store.events());
+    const all = store.events();
+    this.p = foldFrom(emptyProjections(), all);
+    this.lastSeq = all.at(-1)?.seq ?? 0;
   }
 
   ctx(): Ctx {
@@ -77,19 +80,31 @@ export class Service {
     return () => this.listeners.delete(fn);
   }
 
+  /** Catch up on events another process wrote (e.g. `graveyard seed` while serving). */
+  private sync(): void {
+    const fresh = this.store.events(this.lastSeq);
+    if (fresh.length === 0) return;
+    this.p = foldFrom(this.p, fresh);
+    this.lastSeq = fresh.at(-1)!.seq;
+    for (const e of fresh) for (const l of this.listeners) l(e);
+  }
+
   private commit(events: Event[]): void {
     if (events.length === 0) return;
     this.store.append(events);
     this.p = foldFrom(this.p, events);
+    this.lastSeq = events.at(-1)!.seq;
     for (const e of events) for (const l of this.listeners) l(e);
   }
 
   /** Dry run: what would this command do? Nothing is appended (hooks use this). */
   check(cmd: Command): Result<Event[]> {
+    this.sync();
     return decide(this.p, cmd, this.ctx());
   }
 
   exec(cmd: Command): Result<Event[]> {
+    this.sync();
     const r = decide(this.p, cmd, this.ctx());
     if (r.ok) {
       this.commit(r.value);

@@ -3,7 +3,7 @@
 exports[`snapshots: every screen (task 9) > boards  1`] = `
 " GRAVEYARD BBS · boards                                                               sound off [M] 
   board         open   total  busy doors
-▶ #arcade       0      1      — 🕸 idle
+▶ #arcade       0      1      — 💤 idle
   #slides       1      1      —
   #websites     1      1      —
 
@@ -28,7 +28,7 @@ exports[`snapshots: every screen (task 9) > boards  1`] = `
 
 
 
- ↑↓ select · Enter open · Esc back
+ ↑↓ select · Enter open · N new task · Esc back · T tree
 · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ "
 `;
 
@@ -60,7 +60,7 @@ exports[`snapshots: every screen (task 9) > bulletins  1`] = `
 
 
 
- ↑↓ select · Enter open source thread · Esc back
+ ↑↓ select · Enter open source thread · N new task · Esc back · T tree
 · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ "
 `;
 
@@ -124,14 +124,14 @@ exports[`snapshots: every screen (task 9) > deck  1`] = `
 
 
 
- Enter open viewer · Esc back
+ Enter open viewer · N new task · Esc back · T tree
 · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ "
 `;
 
 exports[`snapshots: every screen (task 9) > doors  1`] = `
 " GRAVEYARD BBS · doors                                                                sound off [M] 
   Doors (locks)
-  🕸 No door has been touched.
+  💤 No door has been touched.
 
   #arcade games and #slides decks
 ▶ game  snake                 from arcade-snake  [Enter] launch
@@ -156,7 +156,7 @@ exports[`snapshots: every screen (task 9) > doors  1`] = `
 
 
 
- ↑↓ select · Enter launch/view · Esc back
+ ↑↓ select · Enter launch/view · N new task · Esc back · T tree
 · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ "
 `;
 
@@ -188,7 +188,7 @@ exports[`snapshots: every screen (task 9) > log  1`] = `
 
 
 
- Esc back
+ N new task · Esc back · T tree
 · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ "
 `;
 
@@ -227,14 +227,14 @@ exports[`snapshots: every screen (task 9) > login  1`] = `
 exports[`snapshots: every screen (task 9) > menu  1`] = `
 " GRAVEYARD BBS · main menu                                                            sound off [M] 
 
-  [B]oards   [W]ho's online   [S]ysop queue (1)   [D]oors   [L]og
+  [B]oards   [W]ho's online   [S]ysop queue (1)   [D]oors   [L]og   [N]ew task
   [U] Bulletins (0 lessons)   [M]ute sound   [G]oodbye
 
   ❓🦇 1 open ASK: the spirits summon you
 
   🔥 running        rises from the grave × 1
-  ⛓ blocked         trapped in the crypt × 1
-  ⚰ done            laid to rest × 1
+  🔒 blocked        trapped in the crypt × 1
+  ✅ done           laid to rest × 1
 
 
 
@@ -252,7 +252,7 @@ exports[`snapshots: every screen (task 9) > menu  1`] = `
 
 
 
- B W S D L U  M mute  G goodbye
+ KEYS (no mouse): B boards W who S sysop D doors L log U news N new task · T tree
 · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ "
 `;
 
@@ -284,26 +284,26 @@ exports[`snapshots: every screen (task 9) > sysop  1`] = `
 
 
 
- ↑↓ select · A answer · P approve · N deny · Enter open thread · Esc back
+ ↑↓ select · A answer · P approve · N deny · Enter open thread · Esc back · T tree
 · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ "
 `;
 
 exports[`snapshots: every screen (task 9) > thread arcade-snake 1`] = `
 " GRAVEYARD BBS · thread                                                               sound off [M] 
-  arcade-snake  ⚰ done            laid to rest
+  arcade-snake  ✅ done           laid to rest
   owner builder-2 · turns left 50 · seconds left 3600
 
-  #8 20:00:08 moderator-1  TASK
+  #1 20:00:08 moderator-1  TASK
       Small door game
-  #11 20:00:11 builder-2    🔥 running        rises from the grave (was pending)
-  #12 20:00:12 server       🧪 EVIDENCE [exit 0]
+  #2 20:00:11 builder-2    🔥 running        rises from the grave (was pending)
+  #3 20:00:12 server       🧪 EVIDENCE [exit 0]
       door run_tests · 42 ms · commit abcdef1
-  #13 20:00:13 server       🧪 EVIDENCE [exit 0]
+  #4 20:00:13 server       🧪 EVIDENCE [exit 0]
       door publish · 42 ms · commit abcdef1
-  #14 20:00:14 builder-2    🔮 awaiting-review awaits the reviewer (was running)
-  #15 20:00:15 reviewer-1   REVIEW pass
+  #5 20:00:14 builder-2    🔮 awaiting-review awaits the reviewer (was running)
+  #6 20:00:15 reviewer-1   REVIEW pass
       ok
-  #16 20:00:16 reviewer-1   ⚰ done            laid to rest (was awaiting-review)
+  #7 20:00:16 reviewer-1   ✅ done           laid to rest (was awaiting-review)
 
 
 
@@ -316,23 +316,23 @@ exports[`snapshots: every screen (task 9) > thread arcade-snake 1`] = `
 
 
 
- ↑↓ scroll · A answer · P approve · N deny · X force done · Esc back
+ ↑↓ scroll · N new task · X force done · Esc back · T tree
 · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ "
 `;
 
 exports[`snapshots: every screen (task 9) > thread websites-landing 1`] = `
 " GRAVEYARD BBS · thread                                                               sound off [M] 
-  websites-landing  ⛓ blocked         trapped in the crypt (ask:e6)
+  websites-landing  🔒 blocked        trapped in the crypt (ask:e6)
   owner builder-1 · turns left 50 · seconds left 3600
 
   #1 20:00:01 moderator-1  TASK
       Haunted landing page
-  #4 20:00:04 builder-1    🔥 running        rises from the grave (was pending)
-  #5 20:00:05 builder-1    MILESTONE
+  #2 20:00:04 builder-1    🔥 running        rises from the grave (was pending)
+  #3 20:00:05 builder-1    MILESTONE
       🔥 The signup form has taken shape in the dark. Files: form.html, api.ts.
-  #6 20:00:06 builder-1    ❓🦇 ASK (unanswered) the spirits summon you
+  #4 20:00:06 builder-1    ❓🦇 ASK (unanswered) the spirits summon you
       ❓🦇 Dark theme or blood-red? (answer A or B)
-  #7 20:00:07 builder-1    ⛓ blocked         trapped in the crypt (was running, ask:e6)
+  #5 20:00:07 builder-1    🔒 blocked        trapped in the crypt (was running, ask:e6)
 
 
 
@@ -348,14 +348,14 @@ exports[`snapshots: every screen (task 9) > thread websites-landing 1`] = `
 
 
 
- ↑↓ scroll · A answer · P approve · N deny · X force done · Esc back
+ ↑↓ scroll · A answer · P approve · N deny · X force done · Esc back · T tree
 · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ "
 `;
 
 exports[`snapshots: every screen (task 9) > threads  1`] = `
 " GRAVEYARD BBS · threads                                                              sound off [M] 
   #websites  1 thread
-▶ ⛓ blocked         websites-landing         builder-1    Haunted landing page (ask:e6)
+▶ 🔒 blocked        websites-landing         builder-1    Haunted landing page (ask:e6)
 
 
 
@@ -380,7 +380,7 @@ exports[`snapshots: every screen (task 9) > threads  1`] = `
 
 
 
- ↑↓ select · Enter open · Esc back
+ ↑↓ select · Enter open · N new task · Esc back · T tree
 · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ "
 `;
 
@@ -412,6 +412,6 @@ exports[`snapshots: every screen (task 9) > who  1`] = `
 
 
 
- Esc back
+ N new task · Esc back · T tree
 · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ "
 `;

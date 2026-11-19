@@ -51,3 +51,20 @@ describe("R5.1 theme.ts matches theme.md", () => {
     expect(STATUS.done.emoji).toBe(EMOJI.done);
   });
 });
+
+describe("emoji render in the browser terminal", () => {
+  it("every theme emoji is emoji-presentation, so it is drawn in colour and counts two cells", () => {
+    for (const e of Object.values(EMOJI))
+      for (const ch of e.replace(/\u200d|\ufe0f/g, ""))
+        expect(ch, e).toMatch(/\p{Emoji_Presentation}/u);
+  });
+  it("the web client activates Unicode 11 widths and has an emoji font fallback", () => {
+    const src = readFileSync(
+      resolve(import.meta.dirname, "../src/client.ts"),
+      "utf8",
+    );
+    expect(src).toContain("new Unicode11Addon()");
+    expect(src).toContain('activeVersion = "11"');
+    expect(src).toMatch(/Apple Color Emoji.*Segoe UI Emoji.*Noto Color Emoji/s);
+  });
+});

@@ -14,7 +14,7 @@ const term = new Terminal({
   allowProposedApi: true,
   cursorBlink: false,
   fontFamily:
-    "'Perfect DOS VGA 437', 'Px437 IBM VGA 8x16', 'Courier New', monospace",
+    "'Perfect DOS VGA 437', 'Px437 IBM VGA 8x16', 'Courier New', monospace, 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji'",
   fontSize: 16,
   theme: { background: "#000000" },
 });
@@ -22,6 +22,8 @@ term.loadAddon(new Unicode11Addon());
 term.unicode.activeVersion = "11";
 term.open(document.getElementById("term")!);
 term.focus();
+// A click anywhere on the page returns keyboard focus to the terminal.
+document.addEventListener("click", () => term.focus());
 
 async function pickSource(): Promise<
   { source: Source; base: string } | string

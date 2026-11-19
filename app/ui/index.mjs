@@ -11,7 +11,7 @@ export default function GraveyardBbs() {
     let timer;
     const ask = () =>
       api
-        .get("/api/apps/graveyard-bbs/launch")
+        .get("/apps/graveyard-bbs/api/launch")
         .catch((e) => ({ url: "", error: String(e.message ?? e) }))
         .then((r) => {
           if (!live) return;

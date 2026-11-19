@@ -61,7 +61,7 @@
     "routes": "/api/apps/graveyard-bbs"
   },
   "permissions": {
-    "api": ["/api/apps/graveyard-bbs/*"],
+    "api": ["/apps/graveyard-bbs/api"],
     "cron": true
   }
 }

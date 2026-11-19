@@ -3,6 +3,7 @@
 usage: gy.py mcp | serve [args] | moderator <args>
 """
 import os
+import shutil
 import sys
 from pathlib import Path
 
@@ -25,17 +26,31 @@ def find_home() -> Path:
     return home
 
 
+def find_node() -> str:
+    """The node binary. App processes may get a short PATH without Homebrew."""
+    named = os.environ.get("GRAVEYARD_NODE", "")
+    if named:
+        return named
+    found = shutil.which("node")
+    if found:
+        return found
+    for p in ("/opt/homebrew/bin/node", "/usr/local/bin/node", "/usr/bin/node"):
+        if Path(p).is_file():
+            return p
+    raise SystemExit("node not found. Install Node.js, or set GRAVEYARD_NODE to its path.")
+
+
 def command(args: list[str]) -> tuple[Path, list[str]]:
     """(working directory, argv) for one launcher command."""
     home = find_home()
     if args[:1] == ["moderator"]:
-        return home, ["node", str(home / MODERATOR), *args[1:]]
+        return home, [find_node(), str(home / MODERATOR), *args[1:]]
     if args[:1] in (["mcp"], ["serve"]):
-        return home, ["node", str(home / SERVER), *args]
+        return home, [find_node(), str(home / SERVER), *args]
     raise SystemExit(__doc__)
 
 
 if __name__ == "__main__":
     cwd, argv = command(sys.argv[1:])
     os.chdir(cwd)
-    os.execvp("node", argv)
+    os.execv(argv[0], argv)

@@ -9,16 +9,17 @@ import type { EventType, Status } from "@graveyard/core";
 export const EMOJI = {
   agent: "👻",
   sysop: "🎃",
-  pending: "🕯",
+  pending: "🌙",
   running: "🔥",
-  blocked: "⛓",
+  blocked: "🔒",
   review: "🔮",
-  done: "⚰",
+  done: "✅",
   refusal: "💀",
   ask: "❓🦇",
   lesson: "🪦",
-  idle: "🕸",
+  idle: "💤",
   evidence: "🧪",
+  monster: "🧟",
 } as const;
 
 /** Words (UI copy). Code identifiers stay plain; only rendered text is themed. */
@@ -109,6 +110,8 @@ export const MOTION = {
   shake: 300,
   lid: 500,
   fog: 800,
+  /** The needs-you monster moves one cell per step along its lane. */
+  crawl: 250,
 } as const;
 
 /** Sound names, and when they play (theme.md "Sound"). */

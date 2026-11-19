@@ -6,6 +6,7 @@ import {
   settle,
   stateOf,
   T0,
+  plain,
   threeThreads,
   World,
   actors,
@@ -30,16 +31,20 @@ describe("parseKeys", () => {
 });
 
 describe("navigation", () => {
-  it("login → any key → menu; menu letters open screens; Esc goes back", () => {
+  it("login → any key → tree; letters open screens; Esc goes back; Esc on the tree shows the menu", () => {
     const t = replaySession(threeThreads());
     t.session.paint();
     expect(t.last()).toContain("Press any key");
     t.session.key("x");
-    expect(t.last()).toContain("[B]oards");
+    expect(t.last()).toContain("boards tree");
     t.session.key("s");
     expect(t.last()).toContain("Sysop queue");
     t.session.key("\x1b");
+    expect(t.last()).toContain("boards tree");
+    t.session.key("\x1b");
     expect(t.last()).toContain("[B]oards");
+    t.session.key("t");
+    expect(t.last()).toContain("boards tree");
   });
   it("boards → threads → thread with Enter", () => {
     const t = replaySession(threeThreads());
@@ -220,6 +225,7 @@ describe("replay controls (task 21)", () => {
     expect(t.last()).toContain("REPLAY ×20");
     t.session.key(" ");
     expect(t.last()).toContain("paused");
+    t.session.key("\x1b"); // off the tree, where ←/→ fold and open
     t.session.key("\x1b[C");
     expect(t.last()).toContain("1/22");
     t.session.key("\x1b[D");
@@ -229,4 +235,75 @@ describe("replay controls (task 21)", () => {
 
 describe("unused", () => {
   it("World is importable", () => expect(new World().events).toEqual([]));
+});
+
+describe("Sysop [N] new task", () => {
+  const start = (reply?: Parameters<typeof fakeSource>[1]) => {
+    const f = fakeSource(stateOf(threeThreads()), reply);
+    const out: string[] = [];
+    const s = new Session({
+      source: f.src,
+      write: (x) => out.push(x),
+      reducedMotion: true,
+      now: () => T0,
+    });
+    s.key("x"); // leave login
+    return { ...f, s, out, screen: () => plain(out.at(-1) ?? "") };
+  };
+  it("is listed on the menu and in the help line", () => {
+    const { s, screen } = start();
+    expect(screen()).toContain("N new task");
+    s.key("\x1b"); // tree → menu
+    expect(screen()).toContain("[N]ew task");
+  });
+  it("asks board, title and body, then sends create_task with a thread id", async () => {
+    const { s, acts, screen } = start();
+    s.key("n");
+    expect(screen()).toContain("New task: board [arcade]");
+    s.key("websites\rFix the moat!\rDeep water\r");
+    await settle();
+    expect(acts).toEqual([
+      {
+        type: "createTask",
+        thread: "websites-fix-the-moat",
+        text: "Fix the moat! — Deep water",
+      },
+    ]);
+    expect(screen()).toContain("Created websites-fix-the-moat (pending).");
+  });
+  it("defaults the board, skips an empty body and avoids an existing thread id", async () => {
+    const { s, acts } = start();
+    s.key("n\rLanding\r\r"); // arcade-landing, no body
+    s.key("n\rSnake\r\r"); // arcade-snake exists -> arcade-snake-2
+    await settle();
+    expect(acts.map((a) => a.type === "createTask" && a.thread)).toEqual([
+      "arcade-landing",
+      "arcade-snake-2",
+    ]);
+  });
+  it("Esc, an empty title or a bad board creates nothing", async () => {
+    const { s, acts, screen } = start();
+    s.key("n\x1b");
+    s.key("n\r\r");
+    expect(screen()).toContain("A title is needed");
+    s.key("nbad board\r");
+    expect(screen()).toContain("letters and digits only");
+    await settle();
+    expect(acts).toEqual([]);
+  });
+  it("shows the refusal when the server says no", async () => {
+    const { s, screen } = start({
+      ok: false,
+      error: {
+        code: "ROLE_DENIED",
+        message: "nope",
+        hint: "h",
+        voice: "v",
+      },
+    });
+    s.key("n\rTitle\r\r");
+    await settle();
+    expect(screen()).toContain("ACCESS DENIED");
+    expect(screen()).toContain("ROLE_DENIED");
+  });
 });

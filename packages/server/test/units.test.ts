@@ -467,3 +467,21 @@ describe("sync-power (task 13)", () => {
     expect(syncPower(REPO_ROOT, true)).toEqual([]);
   });
 });
+
+describe("two processes on one store", () => {
+  it("a running server sees a seed written by another process, then creates a task", () => {
+    const env = makeEnv();
+    const live = env.open(); // the serving process, booted on an empty log
+    const other = env.open(); // `graveyard seed`, run while the server is up
+    expect(seed(other).threads.length).toBeGreaterThan(0);
+    const r = live.exec({
+      type: "create_task",
+      actor: sysop,
+      thread_id: "websites-after-seed",
+      text: "made after a seed by another process",
+    });
+    expect(r.ok).toBe(true);
+    expect(Object.keys(live.p.tasks)).toContain("websites-landing");
+    expect(Object.keys(live.p.tasks)).toContain("websites-after-seed");
+  });
+});

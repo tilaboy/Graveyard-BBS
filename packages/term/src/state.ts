@@ -34,6 +34,7 @@ export interface State {
 
 export type ScreenName =
   | "login"
+  | "tree"
   | "menu"
   | "boards"
   | "threads"
@@ -77,8 +78,15 @@ export interface View {
   fx: Record<string, number>;
   denied?: Denied;
   input?: { prompt: string; buf: string; thread: string; ask: string };
+  /** Sysop "new task" prompt flow (board, title, body); `input` holds the line being typed. */
+  newTask?: { step: "board" | "title" | "body"; board: string; title: string };
   flash?: string;
   replay?: ReplayInfo;
+  /**
+   * Start-screen tree. `open` keys are `b:<board>` (open unless false) and `t:<thread>`
+   * (folded unless true). `at` is the cursor row key, so live updates keep it on the same item.
+   */
+  tree: { open: Record<string, boolean>; at?: string };
 }
 
 export const newView = (o: Partial<View> = {}): View => ({
@@ -91,6 +99,7 @@ export const newView = (o: Partial<View> = {}): View => ({
   muted: true,
   now: 0,
   fx: {},
+  tree: { open: {} },
   ...o,
 });
 
@@ -190,4 +199,30 @@ export function parseJson(text: string): unknown {
   } catch {
     return undefined;
   }
+}
+
+/** Tasks a board shows in the tree before `… N more`. */
+export const TREE_FILL = 10;
+
+/**
+ * Which tasks a board shows in the tree. Always: every task with an open ASK (needs the Sysop)
+ * and every running task. Then the newest other tasks until the board shows TREE_FILL.
+ * Order: needs-you first, then newest first by last activity (highest event seq on the thread).
+ */
+export function treeTasks(
+  s: State,
+  board: string,
+): { tasks: Task[]; more: number; needs: Set<string> } {
+  const needs = new Set(openAsks(s).map((a) => a.thread));
+  const last = new Map<string, number>();
+  for (const e of s.events) last.set(e.thread_id, e.seq);
+  const all = threadsOf(s, board).sort(
+    (a, b) =>
+      Number(needs.has(b.thread_id)) - Number(needs.has(a.thread_id)) ||
+      (last.get(b.thread_id) ?? 0) - (last.get(a.thread_id) ?? 0),
+  );
+  const must = (t: Task) => needs.has(t.thread_id) || t.status === "running";
+  let room = TREE_FILL - all.filter(must).length;
+  const tasks = all.filter((t) => must(t) || room-- > 0);
+  return { tasks, more: all.length - tasks.length, needs };
 }

@@ -24,6 +24,7 @@ import {
   published,
   roleOf,
   threadsOf,
+  treeTasks,
   boardOf,
   type State,
   type View,
@@ -92,7 +93,7 @@ function menu(s: State, v: View): string[] {
   const flick = asks > 0 && !lit(v) ? COLOR.dim : COLOR.bold;
   return [
     "",
-    `  ${key("B", "oards")}   ${key("W", "ho's online")}   ${key("S", `ysop queue (${asks})`)}   ${key("D", "oors")}   ${key("L", "og")}`,
+    `  ${key("B", "oards")}   ${key("W", "ho's online")}   ${key("S", `ysop queue (${asks})`)}   ${key("D", "oors")}   ${key("L", "og")}   ${key("N", "ew task")}`,
     `  ${key("U", "")} Bulletins (${s.lessons.length} lesson${s.lessons.length === 1 ? "" : "s"})   ${key("M", "ute sound")}   ${key("G", "oodbye")}`,
     "",
     asks > 0
@@ -302,27 +303,153 @@ export function threadLines(s: State, v: View): string[] {
     ),
     "",
   ];
-  for (const e of s.events) {
-    if (e.thread_id !== t.thread_id || !SHOWN.has(e.type)) continue;
+  // Posts are numbered per thread (1, 2, 3 …); the global log seq stays in the Log screen.
+  postsOf(s, t.thread_id).forEach((e, i) => {
     const d = describe(e, s, v);
     // New posts fade in like mist: dim first, then normal.
     const mist =
       progress(v, `post:${e.seq}`, MOTION.mist) < 0.5 ? `${COLOR.dim};` : "";
     const who = e.caller === "server" ? "server" : e.caller;
     out.push(
-      `  ${sgr(COLOR.dim, `#${e.seq} ${hhmmss(e.at)} ${pad(who, 12)}`)} ${sgr(mist + d.style, d.head)}`,
+      `  ${sgr(COLOR.dim, `#${i + 1} ${hhmmss(e.at)} ${pad(who, 12)}`)} ${sgr(mist + d.style, d.head)}`,
     );
     for (const b of d.body)
       for (const l of wrap(stripUnsafe(b), w))
         out.push(`      ${sgr(mist + d.style, l)}`);
-  }
+  });
   return out;
 }
+
+/** The posts a thread shows, in order; their index + 1 is the per-thread post number. */
+const postsOf = (s: State, thread: string): Event[] =>
+  s.events.filter((e) => e.thread_id === thread && SHOWN.has(e.type));
 
 function thread(s: State, v: View, room: number): string[] {
   const all = threadLines(s, v);
   const end = Math.max(room, all.length - v.scroll);
   return all.slice(Math.max(0, end - room), end);
+}
+
+// ---- tree (start screen) ----------------------------------------------------
+
+export interface TreeRow {
+  /** `b:<board>`, `t:<thread>`, `p:<thread>:<seq>` or `m:<board>` (the "… N more" line). */
+  key: string;
+  kind: "board" | "task" | "post" | "more";
+  board: string;
+  thread?: string;
+  line: string;
+}
+
+const LANE = 8;
+
+/** A task that needs the Sysop: a 🧟 crawls along a lane beside it and the title blinks. */
+function needsYou(v: View): { lane: string; style: string } {
+  const span = LANE - 2;
+  const at = v.reducedMotion
+    ? 0
+    : Math.floor(v.now / MOTION.crawl) % (span + 1);
+  const lane = `${" ".repeat(at)}${EMOJI.monster}${" ".repeat(span - at)}`;
+  const blink = !v.reducedMotion && lit(v) ? COLOR.inverse : COLOR.bold;
+  return {
+    lane: `${lane} ${sgr(`${COLOR.ask};${COLOR.bold}`, "needs you")}`,
+    style: `${COLOR.ask};${blink}`,
+  };
+}
+
+/** Every visible tree row, top to bottom: boards, their shown tasks, posts of open tasks. */
+export function treeRows(s: State, v: View): TreeRow[] {
+  const out: TreeRow[] = [];
+  const open = v.tree.open;
+  const tw = Math.max(10, v.cols - 62);
+  for (const b of boardNames(s)) {
+    const bOpen = open[`b:${b}`] !== false;
+    const { tasks, more, needs } = treeTasks(s, b);
+    out.push({
+      key: `b:${b}`,
+      kind: "board",
+      board: b,
+      line: `${bOpen ? "▾" : "▸"} ${sgr(COLOR.bold, `#${b}`)}  ${sgr(COLOR.dim, `(${threadsOf(s, b).length})`)}`,
+    });
+    if (!bOpen) continue;
+    for (const t of tasks) {
+      const tOpen = open[`t:${t.thread_id}`] === true;
+      const n = needs.has(t.thread_id) ? needsYou(v) : undefined;
+      const title = pad(cut(t.text.split("\n")[0] ?? "", tw), tw);
+      const row = `    ${tOpen ? "▾" : "▸"} ${pad(badge(t.status), badgeW)} ${n ? sgr(n.style, title) : title} ${pad(t.owner ?? "—", 12)}${n ? ` ${n.lane}` : ""}`;
+      out.push({
+        key: `t:${t.thread_id}`,
+        kind: "task",
+        board: b,
+        thread: t.thread_id,
+        line: t.status === "done" ? sgr(COLOR.dim, row) : row,
+      });
+      if (!tOpen) continue;
+      postsOf(s, t.thread_id).forEach((e, i) => {
+        const d = describe(e, s, v);
+        const text = d.body[0]
+          ? ` ${cut(d.body[0], Math.max(10, v.cols - 50))}`
+          : "";
+        out.push({
+          key: `p:${t.thread_id}:${e.seq}`,
+          kind: "post",
+          board: b,
+          thread: t.thread_id,
+          line: `        ${sgr(COLOR.dim, `#${i + 1} ${pad(e.caller, 12)}`)} ${sgr(d.style, d.head)}${sgr(d.style, text)}`,
+        });
+      });
+    }
+    if (more > 0)
+      out.push({
+        key: `m:${b}`,
+        kind: "more",
+        board: b,
+        line: sgr(
+          COLOR.dim,
+          `    … ${more} more (Enter: all threads on #${b})`,
+        ),
+      });
+  }
+  return out;
+}
+
+/** Index of the cursor row. A row that went away falls back to its board, then the top. */
+export function treeCursor(rows: TreeRow[], v: View): number {
+  const at = v.tree.at;
+  const i = rows.findIndex((r) => r.key === at);
+  if (i >= 0 || !at) return Math.max(0, i);
+  const id = at.split(":")[1] ?? "";
+  const board = at.startsWith("b:") || at.startsWith("m:") ? id : boardOf(id);
+  return Math.max(
+    0,
+    rows.findIndex((r) => r.key === `b:${board}`),
+  );
+}
+
+function tree(s: State, v: View, room: number): string[] {
+  const rows = treeRows(s, v);
+  const needs = new Set(openAsks(s).map((a) => a.thread)).size;
+  const head =
+    needs > 0
+      ? `  ${sgr(`${COLOR.ask};${COLOR.bold}`, `${EMOJI.ask} ${needs} needs you`)}`
+      : `  ${EMOJI.idle} Nothing summons you.`;
+  if (rows.length === 0)
+    return [head, "", `  ${EMOJI.idle} No boards yet. Press N to post a task.`];
+  const i = treeCursor(rows, v);
+  const fit = Math.max(1, room - 2);
+  const start = Math.max(
+    0,
+    Math.min(i - Math.floor(fit / 2), rows.length - fit),
+  );
+  return [
+    head,
+    "",
+    ...rows
+      .slice(start, start + fit)
+      .map(
+        (r, j) => `${start + j === i ? sgr(COLOR.bold, "▶ ") : "  "}${r.line}`,
+      ),
+  ];
 }
 
 // ---- who / sysop / doors / bulletins / log / deck --------------------------
@@ -474,19 +601,42 @@ function bye(): string[] {
 
 const HELP: Record<string, string> = {
   login: "any key: enter",
-  menu: "B W S D L U  M mute  G goodbye",
-  boards: "↑↓ select · Enter open · Esc back",
-  threads: "↑↓ select · Enter open · Esc back",
+  tree: "↑↓ move · → open · ← fold · Enter full thread · N new task · B W S D L U · Esc menu",
+  menu: "KEYS (no mouse): B boards W who S sysop D doors L log U news N new task",
+  boards: "↑↓ select · Enter open · N new task · Esc back",
+  threads: "↑↓ select · Enter open · N new task · Esc back",
   thread: "↑↓ scroll · A answer · P approve · N deny · X force done · Esc back",
-  who: "Esc back",
+  who: "N new task · Esc back",
   sysop:
     "↑↓ select · A answer · P approve · N deny · Enter open thread · Esc back",
-  doors: "↑↓ select · Enter launch/view · Esc back",
-  bulletins: "↑↓ select · Enter open source thread · Esc back",
-  log: "Esc back",
-  deck: "Enter open viewer · Esc back",
+  doors: "↑↓ select · Enter launch/view · N new task · Esc back",
+  bulletins: "↑↓ select · Enter open source thread · N new task · Esc back",
+  log: "N new task · Esc back",
+  deck: "Enter open viewer · N new task · Esc back",
   bye: "",
 };
+
+/** True where [N] means "deny": a thread or the Sysop queue with an ASK to answer. */
+export function denyScreen(s: State, v: View): boolean {
+  if (v.screen === "sysop") return askList(s)[v.sel] !== undefined;
+  if (v.screen === "thread")
+    return askList(s).some((x) => x.thread === v.thread);
+  return false;
+}
+
+/** Help line: where no ASK is open, [N] starts a new task instead of denying. */
+function helpFor(s: State, v: View): string {
+  const h = helpBase(s, v);
+  return ["login", "tree", "bye"].includes(v.screen) ? h : `${h} · T tree`;
+}
+
+function helpBase(s: State, v: View): string {
+  if ((v.screen === "thread" || v.screen === "sysop") && !denyScreen(s, v))
+    return v.screen === "thread"
+      ? "↑↓ scroll · N new task · X force done · Esc back"
+      : "↑↓ select · N new task · Enter open thread · Esc back";
+  return HELP[v.screen] ?? "";
+}
 
 /** Replay HUD (task 21): badge always visible, scrub bar with markers, controls. */
 function hud(v: View, runId: string | undefined): string[] {
@@ -507,7 +657,7 @@ function hud(v: View, runId: string | undefined): string[] {
     `${sgr(`${COLOR.error};${COLOR.bold}`, ` REPLAY ×${r.speed} — real log ${runId ?? "?"} `)} ${r.playing ? "▶ playing" : "⏸ paused"}  [${bar.join("")}] ${r.pos}/${r.total}`,
     sgr(
       COLOR.dim,
-      " Space play/pause · 1 5 2 speed 1× 5× 20× · ←/→ step event · Home restart · markers: ? ask  ! refusal  d done",
+      ` Space play/pause · 1 5 2 speed 1× 5× 20× · ${v.screen === "tree" ? "" : "←/→ step event · "}Home restart · markers: ? ask  ! refusal  d done`,
     ),
   ];
 }
@@ -543,6 +693,7 @@ function overlay(v: View): string[] {
 
 const TITLES: Record<string, string> = {
   login: "login",
+  tree: "boards tree",
   menu: "main menu",
   boards: "boards",
   threads: "threads",
@@ -565,6 +716,9 @@ export function render(s: State, v: View): string {
   switch (v.screen) {
     case "login":
       body = login(s, v);
+      break;
+    case "tree":
+      body = tree(s, v, bodyRoom);
       break;
     case "menu":
       body = menu(s, v);
@@ -612,7 +766,7 @@ export function render(s: State, v: View): string {
     ? ` ${sgr(COLOR.ask, `${v.input.prompt}> `)}${v.input.buf}█`
     : v.flash
       ? ` ${v.flash}`
-      : sgr(COLOR.dim, ` ${HELP[v.screen] ?? ""}`);
+      : sgr(COLOR.dim, ` ${helpFor(s, v)}`);
   const foot = v.replay ? hud(v, s.runId) : [fog(v)];
   const rows = [header, ...body, help, ...foot].map((l) => truncate(l, v.cols));
   return `${ESC}[?25l${ESC}[H${rows.map((l) => `${l}${RESET}${ESC}[K`).join("\r\n")}${ESC}[J`;

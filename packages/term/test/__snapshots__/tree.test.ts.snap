@@ -1,0 +1,33 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`needs-you monster > snapshot 1`] = `
+" GRAVEYARD BBS · boards tree                                                          sound off [M] 
+  ❓🦇 1 needs you
+
+▶ ▾ #arcade  (1)
+      ▸ ✅ done           Small door game                        builder-2   
+  ▾ #slides  (1)
+      ▸ 🔥 running        Pitch deck                             builder-1   
+  ▾ #websites  (1)
+      ▸ 🔒 blocked        Haunted landing page                   builder-1    🧟       needs you
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ↑↓ move · → open · ← fold · Enter full thread · N new task · B W S D L U · Esc menu
+· ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ "
+`;

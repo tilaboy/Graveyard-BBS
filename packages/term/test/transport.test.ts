@@ -36,7 +36,7 @@ describe("task 8 telnet", () => {
     expect(plain(got)).toContain("Press any key");
     sock.write("x");
     await new Promise((r) => setTimeout(r, 100));
-    expect(plain(got)).toContain("[B]oards");
+    expect(plain(got)).toContain("boards tree");
     expect(plain(got)).toContain("REPLAY ×1");
     sock.destroy();
     await srv.close();

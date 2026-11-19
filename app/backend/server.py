@@ -8,6 +8,7 @@ import hmac
 import json
 import os
 import re
+import socket
 import subprocess
 import sys
 import threading
@@ -20,6 +21,14 @@ import gy  # noqa: E402
 
 APP = os.environ.get("KIROCREW_APP_NAME", "graveyard-bbs")
 MAX_SKEW = 60
+LAUNCH_PATHS = {"/launch", "/api/launch", f"/api/apps/{APP}/launch"}
+
+
+def free_port() -> int:
+    """A free local port, so a BBS someone already runs on 2626 cannot block the app."""
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]
 
 
 class ProxyV2:
@@ -58,7 +67,7 @@ class Bbs:
 
     def start(self):
         try:
-            cwd, argv = gy.command(["serve", "--telnet-port", "0"])
+            cwd, argv = gy.command(["serve", "--port", str(free_port()), "--telnet-port", "0"])
         except SystemExit as e:
             self.error = str(e)
             return
@@ -105,9 +114,11 @@ class Handler(BaseHTTPRequestHandler):
             "GET", self.path, body, h.get("X-KiroCrew-Proxy-V2"), h.get("X-KiroCrew-Proxy-Nonce")
         ):
             return self._send(401, {"error": "unsigned"})
-        if self.path.split("?")[0] == f"/api/apps/{APP}/launch":
+        # Gateway builds differ in how much prefix they strip, so accept each form.
+        if self.path.split("?")[0] in LAUNCH_PATHS:
             return self._send(200, bbs.launch())
-        self._send(404, {"error": "not found"})
+        print(f"graveyard-bbs: no route for {self.path}", file=sys.stderr, flush=True)
+        self._send(404, {"error": "not found", "path": self.path})
 
     def log_message(self, *args):
         pass

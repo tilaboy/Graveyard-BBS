@@ -50,6 +50,18 @@ describe("Kiro Crew app (spec 05)", () => {
     expect(syncApp(REPO_ROOT, true)).toEqual([]);
   });
 
+  it("agents register in Kiro Crew: parse, have fields, no {PLACEHOLDER}", () => {
+    // Crew renders {NAME} only for builtin apps and skips an agent that holds one.
+    for (const a of manifest.agents) {
+      const text = readFileSync(join(APP, a), "utf8");
+      const agent = JSON.parse(text) as Record<string, unknown>;
+      for (const k of ["name", "description", "prompt"])
+        expect(typeof agent[k], `${a} ${k}`).toBe("string");
+      expect(text, a).not.toMatch(/\{[A-Z][A-Z0-9_]*\}/);
+      expect(agent.resources, a).toBeUndefined();
+    }
+  });
+
   it("R7.2: the launcher explains itself when the checkout is missing", () => {
     const home = mkdtempSync(join(tmpdir(), "gy-home-"));
     const r = py("import gy; gy.command(['mcp'])", {
@@ -68,6 +80,70 @@ describe("Kiro Crew app (spec 05)", () => {
     });
     expect(r.stdout).toContain("graveyard.mjs");
     expect(r.stdout).toContain("'mcp'");
+  });
+
+  it("the page's fetch path reaches a backend route through the gateway proxy", () => {
+    // A process backend (backend.entryPoint) is reached only through the
+    // gateway proxy /apps/<name>/api/<p>, which forwards /api/<p>.
+    // /api/apps/<name>/ is the in-gateway hooks namespace and answers 404 here.
+    const ui = readFileSync(join(APP, "ui", "index.mjs"), "utf8");
+    const url = /\.get\("([^"]+)"\)/.exec(ui)?.[1] ?? "";
+    expect(url).toBe("/apps/graveyard-bbs/api/launch");
+    expect(ui).not.toContain("/api/apps/");
+    const api = (manifest as unknown as { permissions: { api: string[] } })
+      .permissions.api;
+    expect(api).toEqual(["/apps/graveyard-bbs/api"]);
+    expect(url.startsWith(api[0] + "/")).toBe(true);
+    const backendPath = url.replace("/apps/graveyard-bbs/api", "/api");
+    const secret = "s3cret";
+    const nonce = "b".repeat(32);
+    const ts = Math.floor(Date.now() / 1000);
+    const sig = createHmac("sha256", secret)
+      .update(
+        `v2:${ts}:${nonce}:GET:${backendPath}:${createHash("sha256").update("").digest("hex")}`,
+      )
+      .digest("hex");
+    const r = py(
+      `import server
+from http.server import HTTPServer
+import threading, urllib.request
+server.verifier = server.ProxyV2("${secret}")
+s = HTTPServer(("127.0.0.1", 0), server.Handler)
+threading.Thread(target=s.serve_forever, daemon=True).start()
+q = urllib.request.Request("http://127.0.0.1:%d${backendPath}" % s.server_port, headers={"X-KiroCrew-Proxy-V2": "${ts}:${sig}", "X-KiroCrew-Proxy-Nonce": "${nonce}"})
+print(urllib.request.urlopen(q).read().decode())`,
+      { PYTHONPATH: join(APP, "bin") },
+    );
+    expect(r.stdout).toContain('"url"');
+  });
+
+  it("the launch route answers whichever prefix the gateway forwards", () => {
+    const secret = "s3cret";
+    const ts = Math.floor(Date.now() / 1000);
+    for (const [i, path] of [
+      "/launch",
+      "/api/launch",
+      "/api/apps/graveyard-bbs/launch",
+    ].entries()) {
+      const nonce = String(i).repeat(32);
+      const sig = createHmac("sha256", secret)
+        .update(
+          `v2:${ts}:${nonce}:GET:${path}:${createHash("sha256").update("").digest("hex")}`,
+        )
+        .digest("hex");
+      const r = py(
+        `import server
+from http.server import HTTPServer
+import threading, urllib.request
+server.verifier = server.ProxyV2("${secret}")
+s = HTTPServer(("127.0.0.1", 0), server.Handler)
+threading.Thread(target=s.serve_forever, daemon=True).start()
+q = urllib.request.Request("http://127.0.0.1:%d${path}" % s.server_port, headers={"X-KiroCrew-Proxy-V2": "${ts}:${sig}", "X-KiroCrew-Proxy-Nonce": "${nonce}"})
+print(urllib.request.urlopen(q).read().decode())`,
+        { PYTHONPATH: join(APP, "bin") },
+      );
+      expect(r.stdout, path).toContain('"url"');
+    }
   });
 
   describe("R3.3: proxy signature", () => {

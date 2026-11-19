@@ -40,16 +40,17 @@ Code identifiers stay plain (`done`, `blocked`, `sysop`). Only rendered text is 
 |---|---|
 | 👻 | agent / caller |
 | 🎃 | Sysop / human |
-| 🕯 | `pending` |
+| 🌙 | `pending` |
 | 🔥 | `running` |
-| ⛓ | `blocked` |
+| 🔒 | `blocked` |
 | 🔮 | `awaiting-review` |
-| ⚰ | `done` |
+| ✅ | `done` |
 | 💀 | refusal / error |
 | ❓🦇 | `???` ask |
 | 🪦 | lesson (epitaph) |
-| 🕸 | idle board, nothing new |
+| 💤 | idle board, nothing new |
 | 🧪 | EVIDENCE (test run) |
+| 🧟 | needs you: crawls beside a task row waiting on the Sysop |
 
 Max 2 emoji per line. Never use emoji as the only carrier of meaning (screen readers):
 always pair with the word.
@@ -75,7 +76,8 @@ Never theme `EVIDENCE` bodies; doors write them, and they are plain data.
 | Agent starts | a 👻 floats up beside its name | 600 ms |
 | `???` | lantern flicker on the Sysop queue until answered | loops, pauses on focus |
 | Refusal | screen shakes once, red flash of the ACCESS DENIED box | 300 ms |
-| `done` | ⚰ lid closes, row dims | 500 ms |
+| `done` | ✅ lid closes, row dims | 500 ms |
+| Needs you | a 🧟 crawls beside the task row in the tree, the row blinks; reduced motion: still 🧟, highlight only | 250 ms per cell, loops until answered |
 | Idle | slow fog drifts across the footer | ambient |
 
 Respect `prefers-reduced-motion`: replace motion with a static change. Never flash faster
