@@ -190,6 +190,29 @@ export const online = (s: State): string[] =>
     .filter((c) => c.handle !== "server" && s.now - c.last_at <= ONLINE_MS)
     .map((c) => c.handle);
 
+/** A running task whose owner has said nothing for this long is shown as stalled. */
+export const STALL_MS = 10 * 60_000;
+
+/**
+ * Minutes a `running` task's owner has been silent, when that is past STALL_MS; else undefined.
+ * Silence = no event from the owner anywhere (its last_at). "running" alone says nothing about
+ * whether an agent is still alive: one that asked `???` ends its turn, and only the moderator
+ * restarts it.
+ */
+export function stalledMin(s: State, t: Task): number | undefined {
+  if (t.status !== "running" || !t.owner) return undefined;
+  const last = s.p.callers[t.owner]?.last_at;
+  if (last === undefined) return undefined;
+  const idle = s.now - last;
+  return idle >= STALL_MS ? Math.floor(idle / 60_000) : undefined;
+}
+
+/** "52m" / "3h 05m". */
+export const ago = (min: number): string =>
+  min < 60
+    ? `${min}m`
+    : `${Math.floor(min / 60)}h ${String(min % 60).padStart(2, "0")}m`;
+
 /** Door results are EVIDENCE posts holding JSON; `publish` tells us which games and decks exist. */
 export function published(s: State): Published[] {
   const out = new Map<string, Published>();

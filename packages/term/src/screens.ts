@@ -21,6 +21,8 @@ import {
   isOpen,
   online,
   openAsks,
+  stalledMin,
+  ago,
   parseJson,
   published,
   roleOf,
@@ -338,8 +340,18 @@ export function threadLines(s: State, v: View): string[] {
   const t = v.thread ? s.p.tasks[v.thread] : undefined;
   if (!t) return [`  ${EMOJI.refusal} NOT_FOUND: thread ${v.thread ?? "?"}`];
   const w = v.cols - 6;
+  const idle = stalledMin(s, t);
   const out = [
     `  ${sgr(COLOR.bold, t.thread_id)}  ${statusLine(t.status)}${t.reason ? ` (${t.reason})` : ""}`,
+    ...(idle === undefined
+      ? []
+      : [
+          `  ${sgr(`${COLOR.ask};${COLOR.bold}`, `⚠ stalled: ${t.owner} has been silent for ${ago(idle)}. No agent is working on this.`)}`,
+          sgr(
+            COLOR.dim,
+            "    The moderator restarts it on its next step (is the moderator-step schedule on?).",
+          ),
+        ]),
     sgr(
       COLOR.dim,
       `  owner ${t.owner ?? "—"} · turns left ${t.budget.turns_left} · seconds left ${t.budget.seconds_left}`,
@@ -468,7 +480,12 @@ export function treeRows(s: State, v: View): TreeRow[] {
       const title = pad(cut(t.text.split("\n")[0] ?? "", w), w);
       const sub =
         !tOpen && kids.length ? sgr(COLOR.dim, ` +${kids.length}`) : "";
-      const row = `${ind}${mark}${fold} ${pad(badge(t.status), badgeW)} ${n ? sgr(n.style, title) : title} ${pad(t.owner ?? "—", 12)}${sub}${n ? ` ${n.lane}` : ""}`;
+      const idle = stalledMin(s, t);
+      const stall =
+        idle === undefined
+          ? ""
+          : ` ${sgr(`${COLOR.ask};${COLOR.bold}`, `⚠ stalled ${ago(idle)}`)}`;
+      const row = `${ind}${mark}${fold} ${pad(badge(t.status), badgeW)} ${n ? sgr(n.style, title) : title} ${pad(cut(t.owner ?? "—", 12), 12)}${sub}${stall}${n ? ` ${n.lane}` : ""}`;
       out.push({
         key: `t:${t.thread_id}`,
         kind: "task",
@@ -563,6 +580,17 @@ function tree(s: State, v: View, room: number): string[] {
 
 function who(s: State): string[] {
   const on = new Set(online(s));
+  // Caller column fits the longest handle (stage agents have long ones), capped at 30.
+  const cw =
+    Math.min(
+      30,
+      Math.max(
+        12,
+        ...Object.keys(s.p.callers)
+          .filter((h) => h !== "server")
+          .map((h) => h.length),
+      ),
+    ) + 2;
   const rows = Object.values(s.p.callers)
     .filter((c) => c.handle !== "server")
     .map((c) => {
@@ -585,12 +613,19 @@ function who(s: State): string[] {
         : t
           ? mmss(t.budget.seconds_left)
           : "—";
-      return `  ${pad(c.handle, 14)}${pad(roleOf(c.handle), 11)}${pad(t ? `#${boardOf(t.thread_id)}` : "—", 12)}${pad(t ? badge(t.status) : "—", badgeW)} ${pad(lockCol, 22)}${pad(left, 7)}${on.has(c.handle) ? WORDS.online : "silent"}`;
+      const quiet = s.now - (s.p.callers[c.handle]?.last_at ?? s.now);
+      const idle = t ? stalledMin(s, t) : undefined;
+      const state = on.has(c.handle)
+        ? WORDS.online
+        : idle !== undefined
+          ? sgr(`${COLOR.ask};${COLOR.bold}`, `⚠ stalled ${ago(idle)}`)
+          : `silent ${ago(Math.floor(quiet / 60_000))}`;
+      return `  ${pad(cut(c.handle, cw - 2), cw)}${pad(roleOf(c.handle), 11)}${pad(t ? `#${boardOf(t.thread_id)}` : "—", 12)}${pad(t ? badge(t.status) : "—", badgeW)} ${pad(lockCol, 22)}${pad(left, 7)}${state}`;
     });
   return [
     sgr(
       COLOR.bold,
-      `  ${pad("caller", 14)}${pad("role", 11)}${pad("board", 12)}${pad("status", badgeW + 1)}${pad("lock / queue", 22)}${pad("left", 7)}state`,
+      `  ${pad("caller", cw)}${pad("role", 11)}${pad("board", 12)}${pad("status", badgeW + 1)}${pad("lock / queue", 22)}${pad("left", 7)}state`,
     ),
     ...(rows.length ? rows : [`  ${EMOJI.idle} Nobody has called yet.`]),
   ];
