@@ -1,4 +1,4 @@
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -10,7 +10,7 @@ import { Store } from "../../server/src/store.js";
 import { buildTools, callTool, type ToolCtx } from "../../server/src/tools.js";
 import { step, type Bbs, type Io } from "../src/execute.js";
 import { initialState, seedHub } from "../src/planner.js";
-import { KiroCliRunner, KiroCrewRunner } from "../src/runner.js";
+import { agentName, KiroCliRunner, KiroCrewRunner } from "../src/runner.js";
 import { BOARDS, opts } from "./log.js";
 
 const tools = buildTools();
@@ -66,7 +66,7 @@ describe("executor against the real server", () => {
     expect(r.errors).toEqual([]);
     const spawn = w.runner.calls.find((c) => c.tool === "spawn_run")!;
     const task = String(spawn.args["task"]);
-    expect(spawn.args["agent"]).toBe("builder");
+    expect(spawn.args["agent"]).toBe("graveyard-builder");
     expect(task).toContain(
       '## lessons\n- "signup form has no alt text (review rejected)" (from graveyard-bbs/websites-landing-build)',
     );
@@ -173,7 +173,13 @@ describe("runners", () => {
     expect(id).toBe("4242");
     expect(seen[0]).toMatchObject({
       file: "kiro-cli",
-      args: ["chat", "--no-interactive", "--agent", "builder", "do it"],
+      args: [
+        "chat",
+        "--no-interactive",
+        "--agent",
+        "graveyard-builder",
+        "do it",
+      ],
     });
     expect(seen[0]?.env["GRAVEYARD_TOKEN"]).toBe("gy_x");
     expect(await r.steer()).toBe(false);
@@ -190,5 +196,17 @@ describe("runners", () => {
       cwd: "/tmp/wt",
     });
     expect(r.calls[0]?.args["cwd"]).toBe("/tmp/wt");
+  });
+
+  it("every role maps to an agent file that exists, in the app and in .kiro", () => {
+    const root = join(import.meta.dirname, "../../..");
+    for (const dir of ["app/agents", ".kiro/agents"])
+      for (const f of readdirSync(join(root, dir))) {
+        const role = f.replace(/\.json$/, "");
+        const file = JSON.parse(readFileSync(join(root, dir, f), "utf8")) as {
+          name: string;
+        };
+        expect(file.name).toBe(agentName(role));
+      }
   });
 });

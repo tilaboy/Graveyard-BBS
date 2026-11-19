@@ -11,6 +11,11 @@ export interface SpawnReq {
   cwd?: string;
 }
 
+/** The agent name for a role: app/agents and .kiro/agents both name it `graveyard-<role>`. */
+export function agentName(role: string): string {
+  return `graveyard-${role}`;
+}
+
 /** How a board agent is started and steered. The planner never touches this. */
 export interface Runner {
   /** Returns an agent id. */
@@ -44,7 +49,7 @@ export class KiroCliRunner implements Runner {
   async spawn(r: SpawnReq): Promise<string> {
     const child = this.launch(
       this.bin,
-      ["chat", "--no-interactive", "--agent", r.role, r.task],
+      ["chat", "--no-interactive", "--agent", agentName(r.role), r.task],
       {
         env: { ...process.env, ...r.env },
         ...(r.cwd ? { cwd: r.cwd } : {}),
@@ -87,7 +92,7 @@ export class KiroCrewRunner implements Runner {
       tool: "spawn_run",
       args: {
         task: r.task,
-        agent: r.role,
+        agent: agentName(r.role),
         include_lessons: true,
         ...(r.cwd ? { cwd: r.cwd } : {}),
       },
