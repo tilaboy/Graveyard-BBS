@@ -56,8 +56,10 @@ def write_url(url: str) -> None:
         pass
 
 
-def bbs_env() -> dict[str, str]:
-    """The environment for mcp/moderator: GRAVEYARD_URL points at the app's own BBS when it runs."""
+def bbs_env(args=None):
+    """Env for mcp/moderator: GRAVEYARD_URL is the app's own BBS when it runs. A scheduled
+    moderator turn gets no dashboard secrets, so `moderator` falls back to the owner-only
+    token file written by `graveyard caller rotate moderator --save`."""
     env = dict(os.environ)
     try:
         url = url_file().read_text(encoding="utf-8").strip()
@@ -65,6 +67,13 @@ def bbs_env() -> dict[str, str]:
         url = ""
     if re.fullmatch(r"http://127\.0\.0\.1:[0-9]{1,5}", url):
         env["GRAVEYARD_URL"] = url
+    if (args or [])[:1] == ["moderator"] and not env.get("GRAVEYARD_TOKEN"):
+        try:
+            tok = (find_home() / ".graveyard" / "moderator-token").read_text(encoding="utf-8").strip()
+        except (OSError, SystemExit):
+            tok = ""
+        if re.fullmatch(r"gy_[0-9a-f]{48}", tok):
+            env["GRAVEYARD_TOKEN"] = tok
     return env
 
 
@@ -81,4 +90,4 @@ def command(args: list[str]) -> tuple[Path, list[str]]:
 if __name__ == "__main__":
     cwd, argv = command(sys.argv[1:])
     os.chdir(cwd)
-    os.execve(argv[0], argv, bbs_env())
+    os.execve(argv[0], argv, bbs_env(sys.argv[1:]))

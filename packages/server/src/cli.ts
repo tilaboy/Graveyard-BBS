@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -22,7 +22,7 @@ const USAGE = `usage: graveyard <command>
                                            start the BBS on 127.0.0.1 (web terminal at /term/, telnet 2323; 0 = no telnet)
   replay <bundle> [--speed N]              play a recorded run in this terminal
   caller add <handle> --role <role>        print a new token once
-  caller rotate <handle>                   replace a caller's token, print it once
+  caller rotate <handle> [--save]          replace a caller's token; print it once, or save it to .graveyard/<handle>-token
   mcp                                      MCP stdio server (proxies to GRAVEYARD_URL)
   hook pre-tool|spawn|stop                 Kiro hook entry points (event JSON on stdin)
   seed [demo] [--repo DIR] [--lease S]     demo callers, threads and a clean demo repo
@@ -72,6 +72,7 @@ async function main(argv: string[]): Promise<number> {
       role: { type: "string" },
       repo: { type: "string" },
       out: { type: "string" },
+      save: { type: "boolean" },
     },
   });
   const lease = values.lease
@@ -131,7 +132,20 @@ async function main(argv: string[]): Promise<number> {
           console.error(`no caller '${handle}' in this BBS`);
           return 1;
         }
-        console.log(svc.store.rotateCaller(handle));
+        const secret = svc.store.rotateCaller(handle);
+        if (values.save) {
+          // Owner-only file the app launcher (app/bin/gy.py) reads when GRAVEYARD_TOKEN is unset.
+          const dir = resolve(process.cwd(), ".graveyard");
+          mkdirSync(dir, { recursive: true });
+          const file = resolve(dir, `${handle}-token`);
+          writeFileSync(file, `${secret}\n`, { mode: 0o600 });
+          chmodSync(file, 0o600);
+          console.error(
+            `caller '${handle}' has a new token, saved to ${file} (owner-only); the old one stops working.`,
+          );
+          return 0;
+        }
+        console.log(secret);
         console.error(
           `caller '${handle}' has a new token (shown once); the old one stops working.`,
         );

@@ -100,6 +100,32 @@ print(json.dumps(gy.bbs_env().get("GRAVEYARD_URL")))`,
     expect(run("http://evil.example:80")).toBe('"http://127.0.0.1:2626"');
   });
 
+  it("a scheduled moderator turn finds its token file; mcp never reads it", () => {
+    const fake = mkdtempSync(join(tmpdir(), "gy-tok-"));
+    mkdirSync(join(fake, "packages/server/bin"), { recursive: true });
+    mkdirSync(join(fake, ".graveyard"));
+    writeFileSync(join(fake, "packages/server/bin/graveyard.mjs"), "");
+    const tok = `gy_${"a".repeat(48)}`;
+    writeFileSync(join(fake, ".graveyard/moderator-token"), `${tok}\n`);
+    const env = (args: string, extra: Record<string, string> = {}) =>
+      py(
+        `import gy, json; print(json.dumps(gy.bbs_env(${args}).get("GRAVEYARD_TOKEN")))`,
+        {
+          PYTHONPATH: join(APP, "bin"),
+          GRAVEYARD_HOME: fake,
+          GRAVEYARD_TOKEN: "",
+          ...extra,
+        },
+      ).stdout.trim();
+    expect(env('["moderator", "step"]')).toBe(JSON.stringify(tok));
+    expect(env('["mcp"]')).toBe('""');
+    expect(env('["moderator", "step"]', { GRAVEYARD_TOKEN: "gy_env" })).toBe(
+      '"gy_env"',
+    );
+    writeFileSync(join(fake, ".graveyard/moderator-token"), "not a token");
+    expect(env('["moderator", "step"]')).toBe('""');
+  });
+
   it("R7.1: the launcher runs the server from GRAVEYARD_HOME", () => {
     const r = py("import gy; print(gy.command(['mcp'])[1][-2:])", {
       PYTHONPATH: join(APP, "bin"),
