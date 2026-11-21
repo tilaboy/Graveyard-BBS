@@ -3,6 +3,7 @@ import { Terminal } from "@xterm/xterm";
 import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { createAudio } from "./audio.js";
 import { fitSize, MIN_COLS, MIN_ROWS } from "./fit.js";
+import { pathSpans } from "./format.js";
 import { Session } from "./session.js";
 import { LiveSource, ReplaySource, type Source } from "./source.js";
 
@@ -116,6 +117,34 @@ void (async () => {
   session = live;
   picked.source.start();
   term.onData((d) => live.key(d));
+  // File paths on screen are links: hover underlines, click opens the in-terminal file viewer.
+  term.registerLinkProvider({
+    provideLinks(y, done) {
+      const line = live.linkable()
+        ? term.buffer.active.getLine(y - 1)
+        : undefined;
+      if (!line) return done(undefined);
+      // Text and the cell (1-based) where each UTF-16 unit starts; wide emoji take two cells.
+      let text = "";
+      const col: number[] = [];
+      for (let x = 0; x < line.length; x++) {
+        const ch = line.getCell(x)?.getChars() ?? "";
+        if (!ch && line.getCell(x)?.getWidth() === 0) continue;
+        const c = ch || " ";
+        for (let i = 0; i < c.length; i++) col.push(x + 1);
+        text += c;
+      }
+      const links = pathSpans(text).map((p) => ({
+        text: p.path,
+        range: {
+          start: { x: col[p.start] ?? 1, y },
+          end: { x: col[p.end - 1] ?? 1, y },
+        },
+        activate: () => live.openLink(p.path),
+      }));
+      done(links.length ? links : undefined);
+    },
+  });
   setInterval(() => live.needsTick() && live.tick(), 100);
   live.paint();
 })();

@@ -8,6 +8,8 @@ import { defaultDoors } from "./doors/index.js";
 import type { RegisteredDoor } from "./doors/types.js";
 import { checkPreTool, HookEventSchema, recordStop } from "./hooks.js";
 import { readStatic } from "./static.js";
+import { readTreeFile } from "./files.js";
+import { rootOf, worktreePath } from "./worktree.js";
 import * as sysop from "./sysop.js";
 import {
   buildTools,
@@ -125,6 +127,26 @@ export async function startServer(opts: ServerOptions) {
       text: t.text,
     })),
   );
+  // A file (or one folder level) from the thread's top task worktree, for the terminal's viewer.
+  app.get("/api/files/:thread", async (req, reply) => {
+    const { thread } = z.object({ thread: z.string() }).parse(req.params);
+    const q = z.object({ path: z.string() }).safeParse(req.query);
+    if (!q.success)
+      return reply
+        .code(400)
+        .send(toolFail("BAD_ARGS", "path is required", "Add ?path=<file>."));
+    if (!svc.p.tasks[thread])
+      return reply
+        .code(404)
+        .send(toolFail("NOT_FOUND", `no thread ${thread}`, "Check the id."));
+    const r = readTreeFile(
+      worktreePath(svc.config.dataDir, rootOf(svc.p.tasks, thread)),
+      q.data.path,
+    );
+    reply.header("cache-control", "no-store");
+    if (!r.ok) return reply.code(r.status).send({ ok: false, error: r.error });
+    return reply.send(r);
+  });
   app.get("/api/events", async (req) => {
     const after = z.coerce
       .number()

@@ -730,6 +730,77 @@ function deck(s: State, v: View): string[] {
   ];
 }
 
+// ---- [O] open file: picker and viewer ----------------------------------------
+
+/** The words of a post that can name files. */
+export const postText = (e: Event): string => {
+  const b = e.body as { text?: unknown; reasons?: unknown };
+  return typeof b.text === "string"
+    ? b.text
+    : Array.isArray(b.reasons)
+      ? b.reasons.join("\n")
+      : "";
+};
+
+/** Rows of file content the viewer shows at once (the body minus its 2 header lines). */
+export const pageOf = (v: View): number =>
+  Math.max(1, Math.max(5, v.rows - 3 - (v.replay ? 2 : 1)) - 2);
+
+function pathsScreen(v: View): string[] {
+  const p = v.paths;
+  if (!p) return [];
+  return [
+    sgr(COLOR.bold, `  Files named in ${p.thread}`),
+    "",
+    ...p.list.map(
+      (f, i) => `${sel(v, i)}${sgr(COLOR.path, cut(f, v.cols - 4))}`,
+    ),
+  ];
+}
+
+const SGR_ANY = /\x1b\[[0-9;]*m/g;
+
+/** File text as screen lines. It is untrusted: no control sequences, not even colours. */
+export const fileLines = (text: string): string[] =>
+  stripUnsafe(text.replace(/\r\n?/g, "\n"))
+    .replace(SGR_ANY, "")
+    .replace(/\n$/, "")
+    .split("\n");
+
+function fileScreen(v: View): string[] {
+  const f = v.file;
+  if (!f) return [];
+  const c = f.content;
+  const page = pageOf(v);
+  if (c.kind === "dir") {
+    const start = Math.max(0, v.sel - page + 1);
+    return [
+      `  ${sgr(`${COLOR.path};${COLOR.bold}`, `${c.path || "."}/`)}  ${sgr(COLOR.dim, `${c.entries.length} entr${c.entries.length === 1 ? "y" : "ies"} · ${f.thread}`)}`,
+      "",
+      ...(c.entries.length === 0 ? [`  ${EMOJI.idle} Empty folder.`] : []),
+      ...c.entries
+        .slice(start, start + page)
+        .map(
+          (e, i) =>
+            `${sel(v, start + i)}${e.endsWith("/") ? sgr(COLOR.path, e) : e}`,
+        ),
+    ];
+  }
+  // File text is untrusted: no control sequences, not even colours.
+  const lines = fileLines(c.text);
+  const md = /\.(md|markdown)$/i.test(c.path);
+  const nw = String(lines.length).length;
+  const top = Math.min(v.scroll, Math.max(0, lines.length - page));
+  return [
+    `  ${sgr(`${COLOR.path};${COLOR.bold}`, c.path)}  ${sgr(COLOR.dim, `${lines.length} line${lines.length === 1 ? "" : "s"} · ${top + 1}-${Math.min(lines.length, top + page)} · ${f.thread}`)}`,
+    "",
+    ...lines.slice(top, top + page).map((l, i) => {
+      const n = sgr(COLOR.dim, `${String(top + i + 1).padStart(nw)} │`);
+      return `  ${n} ${md && /^#{1,6}\s/.test(l) ? sgr(COLOR.bold, l) : l}`;
+    }),
+  ];
+}
+
 function bye(): string[] {
   return [
     "",
@@ -743,12 +814,12 @@ function bye(): string[] {
 
 const HELP: Record<string, string> = {
   login: "any key: enter",
-  tree: "↑↓ move · → open · ← fold · Enter full thread · R reply · N new task · B W S D L U · Esc menu",
+  tree: "↑↓ move · ←→ fold · Enter thread · O open file · R reply · N new task · B W S D L U · Esc menu",
   menu: "KEYS (no mouse): B boards W who S sysop D doors L log U news N new task",
   boards: "↑↓ select · Enter open · N new task · Esc back",
   threads: "↑↓ select · Enter open · N new task · Esc back",
   thread:
-    "↑↓ scroll · R reply · A answer · P approve · N deny · X force done · Esc back",
+    "↑↓ scroll · O open file · R reply · A answer · P approve · N deny · X force done · Esc back",
   who: "N new task · Esc back",
   sysop:
     "↑↓ select · A answer · P approve · N deny · Enter open thread · Esc back",
@@ -756,6 +827,8 @@ const HELP: Record<string, string> = {
   bulletins: "↑↓ select · Enter open source thread · N new task · Esc back",
   log: "N new task · Esc back",
   deck: "Enter open viewer · N new task · Esc back",
+  paths: "↑↓ select · Enter open · Esc back",
+  file: "↑↓ PgUp PgDn scroll · Esc back",
   bye: "",
 };
 
@@ -776,8 +849,10 @@ function helpFor(s: State, v: View): string {
 function helpBase(s: State, v: View): string {
   if ((v.screen === "thread" || v.screen === "sysop") && !denyScreen(s, v))
     return v.screen === "thread"
-      ? "↑↓ scroll · R reply · N new task · X force done · Esc back"
+      ? "↑↓ scroll · O open file · R reply · N new task · X force done · Esc back"
       : "↑↓ select · N new task · Enter open thread · Esc back";
+  if (v.screen === "file" && v.file?.content.kind === "dir")
+    return "↑↓ select · Enter open · Esc back";
   return HELP[v.screen] ?? "";
 }
 
@@ -847,6 +922,8 @@ const TITLES: Record<string, string> = {
   bulletins: "bulletins",
   log: "log",
   deck: "deck viewer",
+  paths: "open file",
+  file: "file viewer",
   bye: "goodbye",
 };
 
@@ -892,6 +969,12 @@ export function render(s: State, v: View): string {
       break;
     case "deck":
       body = deck(s, v);
+      break;
+    case "paths":
+      body = pathsScreen(v);
+      break;
+    case "file":
+      body = fileScreen(v);
       break;
     default:
       body = bye();

@@ -9,11 +9,15 @@ import {
   boardsList,
   gameList,
   denyScreen,
+  fileLines,
+  pageOf,
+  postText,
   render,
   threadList,
   treeCursor,
   treeRows,
 } from "./screens.js";
+import { pathsIn } from "./format.js";
 import type { Action, Source } from "./source.js";
 import { boardNames, newView, openAsks, type View } from "./state.js";
 import { BELL_REPEAT_MS, type SoundName } from "./theme.js";
@@ -87,7 +91,10 @@ const slugOf = (s: string): string =>
     .slice(0, 40)
     .replace(/-+$/, "");
 
-type Nav = Pick<View, "screen" | "board" | "thread" | "sel" | "scroll">;
+type Nav = Pick<
+  View,
+  "screen" | "board" | "thread" | "sel" | "scroll" | "paths" | "file"
+>;
 
 export class Session {
   readonly view: View;
@@ -203,11 +210,13 @@ export class Session {
   }
 
   private go(screen: View["screen"], patch: Partial<Nav> = {}): void {
-    const { screen: s, board, thread, sel, scroll } = this.view;
+    const { screen: s, board, thread, sel, scroll, paths, file } = this.view;
     this.stack.push({
       screen: s,
       ...(board ? { board } : {}),
       ...(thread ? { thread } : {}),
+      ...(paths ? { paths } : {}),
+      ...(file ? { file } : {}),
       sel,
       scroll,
     });
@@ -219,6 +228,8 @@ export class Session {
     if (n) {
       delete this.view.board;
       delete this.view.thread;
+      delete this.view.paths;
+      delete this.view.file;
       Object.assign(this.view, n);
     }
   }
@@ -237,6 +248,12 @@ export class Session {
         return gameList(s).length;
       case "bulletins":
         return s.lessons.length;
+      case "paths":
+        return v.paths?.list.length ?? 0;
+      case "file":
+        return v.file?.content.kind === "dir"
+          ? v.file.content.entries.length
+          : 0;
       default:
         return 0;
     }
@@ -284,6 +301,7 @@ export class Session {
     if (k === "esc" && v.screen !== "bye") return this.back();
     if ((k === "t" || k === "T") && v.screen !== "bye") return this.home();
     if (v.screen === "tree" && this.treeKey(k)) return;
+    if (v.screen === "file" && this.fileKey(k)) return;
     if (k === "up")
       return v.screen === "thread" ? void (v.scroll += 1) : this.move(-1);
     if (k === "down")
@@ -292,6 +310,7 @@ export class Session {
         : this.move(1);
     const key = k.toLowerCase();
     if (key === "r" && this.startReply()) return;
+    if (key === "o" && this.startOpen()) return;
     if (key === "n" && !this.denies()) return this.startNewTask();
     this.screenKey(key);
   }
@@ -387,6 +406,19 @@ export class Session {
         if (k === "enter" && d) this.openUrl(`decks/${d.slug}/index.html`);
         return;
       }
+      case "paths": {
+        const p = v.paths?.list[v.sel];
+        if (k === "enter" && p && v.paths)
+          void this.openFile(v.paths.thread, p);
+        return;
+      }
+      case "file": {
+        const c = v.file?.content;
+        const e = c?.kind === "dir" ? c.entries[v.sel] : undefined;
+        if (k === "enter" && e && c && v.file)
+          void this.openFile(v.file.thread, c.path ? `${c.path}/${e}` : e);
+        return;
+      }
       default:
     }
   }
@@ -396,6 +428,8 @@ export class Session {
     this.stack.length = 0;
     delete this.view.board;
     delete this.view.thread;
+    delete this.view.paths;
+    delete this.view.file;
     Object.assign(this.view, { screen: "tree", sel: 0, scroll: 0 });
   }
 
@@ -502,6 +536,113 @@ export class Session {
       reply: true,
     };
     return true;
+  }
+
+  /** The thread the screen is about: the open thread, the tree cursor's, the picker's or the file's. */
+  private hereThread(): string | undefined {
+    const v = this.view;
+    const s = this.o.source.state();
+    if (v.screen === "thread") return v.thread;
+    if (v.screen === "tree")
+      return treeRows(s, v)[treeCursor(treeRows(s, v), v)]?.thread;
+    if (v.screen === "paths") return v.paths?.thread;
+    if (v.screen === "file") return v.file?.thread;
+    return undefined;
+  }
+
+  /** [O] on a tree post (that post), a tree task or the full thread (all its posts): list the paths named. */
+  private startOpen(): boolean {
+    const v = this.view;
+    const s = this.o.source.state();
+    if (v.screen !== "tree" && v.screen !== "thread") return false;
+    const thread = this.hereThread();
+    if (!thread || !s.p.tasks[thread]) return false;
+    const row =
+      v.screen === "tree"
+        ? treeRows(s, v)[treeCursor(treeRows(s, v), v)]
+        : undefined;
+    const seq = row?.kind === "post" ? Number(row.key.split(":")[2]) : NaN;
+    const list = [
+      ...new Set(
+        s.events
+          .filter(
+            (e) =>
+              e.thread_id === thread && (Number.isNaN(seq) || e.seq === seq),
+          )
+          .flatMap((e) => pathsIn(postText(e))),
+      ),
+    ];
+    if (list.length === 0) {
+      v.flash = `No file paths in this ${row?.kind === "post" ? "post" : "thread"}.`;
+      return true;
+    }
+    this.go("paths", { paths: { thread, list } });
+    return true;
+  }
+
+  /** ↑↓ PgUp PgDn Home scroll a file; a folder listing moves its cursor. True if used. */
+  private fileKey(k: string): boolean {
+    const v = this.view;
+    const c = v.file?.content;
+    const page = pageOf(v);
+    const step =
+      k === "up"
+        ? -1
+        : k === "down"
+          ? 1
+          : k === "pgup"
+            ? -page
+            : k === "pgdn"
+              ? page
+              : k === "home"
+                ? -Infinity
+                : 0;
+    if (!c || step === 0) return false;
+    if (c.kind === "dir") {
+      this.move(Number.isFinite(step) ? step : -v.sel);
+      return true;
+    }
+    const max = Math.max(0, fileLines(c.text).length - page);
+    v.scroll = Math.max(0, Math.min(max, v.scroll + step));
+    return true;
+  }
+
+  /** Fetch `path` from the thread's worktree, then show it. A refusal opens the ACCESS DENIED box. */
+  private async openFile(thread: string, path: string): Promise<void> {
+    this.view.flash = `Opening ${path}…`;
+    this.paint();
+    const r = await this.o.source.readFile(thread, path);
+    this.sync();
+    delete this.view.flash;
+    if (!r.ok) {
+      this.view.denied = { error: r.error, transition: `open ${path}` };
+      this.view.fx["denied"] = this.view.now;
+      this.sound("organ");
+    } else this.go("file", { file: { thread, content: r.value } });
+    this.paint();
+  }
+
+  /** True while a click on a file path means something (screens about one thread, nothing typed). */
+  linkable(): boolean {
+    const v = this.view;
+    return (
+      !v.input &&
+      !v.denied &&
+      ["tree", "thread", "paths", "file"].includes(v.screen)
+    );
+  }
+
+  /** A click on a path on screen (web client): open it from the thread whose post names it. */
+  openLink(path: string): void {
+    if (!this.linkable()) return;
+    const s = this.o.source.state();
+    const here = this.hereThread();
+    const names = (e: (typeof s.events)[number]) => postText(e).includes(path);
+    const thread =
+      here && s.events.some((e) => e.thread_id === here && names(e))
+        ? here
+        : (s.events.findLast(names)?.thread_id ?? here);
+    if (thread) void this.openFile(thread, path);
   }
 
   /** [N] on the menu: board, title, body, then the existing create_task command (the server checks the role). */

@@ -12,6 +12,7 @@ import {
   ReplaySource,
   type ActResult,
   type Action,
+  type FileContent,
   type Source,
 } from "../src/source.js";
 import { Session, type Effect } from "../src/session.js";
@@ -224,17 +225,32 @@ export function replaySession(w: World, o: { reducedMotion?: boolean } = {}) {
 export { LiveSource, ReplaySource, type Source };
 
 /** A Source over fixed state that records Sysop actions. */
-export function fakeSource(state: State, reply: ActResult = { ok: true }) {
+export function fakeSource(
+  state: State,
+  reply: ActResult = { ok: true },
+  files: Record<string, FileContent> = {},
+) {
   const acts: Action[] = [];
+  const reads: { thread: string; path: string }[] = [];
   const src: Source = {
     state: () => state,
     subscribe: () => () => undefined,
     act: async (a) => (acts.push(a), reply),
+    readFile: async (thread, path) => {
+      reads.push({ thread, path });
+      const f = files[path];
+      return f
+        ? { ok: true, value: f }
+        : {
+            ok: false,
+            error: { code: "NOT_FOUND", message: path, hint: "h", voice: "v" },
+          };
+    },
     advance: () => undefined,
     start: () => undefined,
     stop: () => undefined,
   };
-  return { src, acts };
+  return { src, acts, reads };
 }
 
 export const settle = () => new Promise((r) => setTimeout(r, 0));

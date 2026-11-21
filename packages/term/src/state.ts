@@ -6,6 +6,7 @@ import {
   type Task,
 } from "@graveyard/core";
 import { z } from "zod";
+import type { FileContent } from "./source.js";
 
 export interface Lesson {
   text: string;
@@ -45,6 +46,8 @@ export type ScreenName =
   | "bulletins"
   | "deck"
   | "log"
+  | "paths"
+  | "file"
   | "bye";
 
 export interface ReplayInfo {
@@ -94,6 +97,10 @@ export interface View {
    * (folded unless true). `at` is the cursor row key, so live updates keep it on the same item.
    */
   tree: { open: Record<string, boolean>; at?: string };
+  /** [O] picker: the file paths a post (or thread) names. */
+  paths?: { thread: string; list: string[] };
+  /** File viewer: what `GET /api/files/<thread>` returned. `scroll` is the top line. */
+  file?: { thread: string; content: FileContent };
 }
 
 export const newView = (o: Partial<View> = {}): View => ({

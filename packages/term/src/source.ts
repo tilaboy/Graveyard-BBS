@@ -36,6 +36,13 @@ export interface RefusalError {
 }
 export type ActResult = { ok: true } | { ok: false; error: RefusalError };
 
+/** A file or one folder level from a thread's worktree (`GET /api/files/<thread>?path=`). */
+export type FileContent =
+  | { kind: "file"; path: string; text: string }
+  | { kind: "dir"; path: string; entries: string[] };
+export type FileResult =
+  { ok: true; value: FileContent } | { ok: false; error: RefusalError };
+
 export interface Change {
   /** Events that arrived after the session began (they ring bells and fade in). */
   added: Event[];
@@ -57,6 +64,8 @@ export interface Source {
   state(): State;
   subscribe(fn: (c: Change) => void): () => void;
   act(a: Action): Promise<ActResult>;
+  /** Read a file the thread's agents wrote. A replay has no files and refuses. */
+  readFile(thread: string, path: string): Promise<FileResult>;
   /** Advance time by `dtMs` of wall clock (replay only; live ignores it). */
   advance(dtMs: number): void;
   replay?: ReplayControl;
@@ -83,6 +92,11 @@ const READ_ONLY: RefusalError = {
   message: "this is a read-only replay; nothing can be answered here",
   hint: "Run a live BBS (`graveyard serve`) to answer.",
   voice: VOICE.ROLE_DENIED,
+};
+const READ_ONLY_FILES: RefusalError = {
+  ...READ_ONLY,
+  message: "this is a read-only replay; it has no files to open",
+  hint: "Run a live BBS (`graveyard serve`) to open files.",
 };
 
 const REFUSAL_NOTE =
@@ -198,6 +212,10 @@ export class ReplaySource extends Base implements Source, ReplayControl {
     return r.ok ? { ok: true } : { ok: false, error: r.error };
   }
 
+  async readFile(): Promise<FileResult> {
+    return { ok: false, error: READ_ONLY_FILES };
+  }
+
   start(): void {}
   stop(): void {}
 }
@@ -212,6 +230,17 @@ const Refusal = z.object({
     hint: z.string(),
     voice: z.string(),
   }),
+});
+const FileReply = z.object({
+  ok: z.literal(true),
+  value: z.discriminatedUnion("kind", [
+    z.object({ kind: z.literal("file"), path: z.string(), text: z.string() }),
+    z.object({
+      kind: z.literal("dir"),
+      path: z.string(),
+      entries: z.array(z.string()),
+    }),
+  ]),
 });
 const LessonsReply = z.object({
   ok: z.literal(true),
@@ -378,6 +407,28 @@ export class LiveSource extends Base implements Source {
     );
   }
 
+  async readFile(thread: string, path: string): Promise<FileResult> {
+    let res: Response;
+    try {
+      res = await this.f(
+        `${this.o.baseUrl}/api/files/${encodeURIComponent(thread)}?path=${encodeURIComponent(path)}`,
+        { headers: this.headers() },
+      );
+    } catch (e) {
+      return fault("NETWORK", `server unreachable: ${String(e)}`);
+    }
+    const j = safeJson(await res.text().catch(() => ""));
+    const r = Refusal.safeParse(j);
+    if (r.success) return { ok: false, error: r.data.error };
+    const f = FileReply.safeParse(j);
+    if (res.ok && f.success) return f.data;
+    // An older server has no /api/files route and answers a bare 404.
+    return fault(
+      "BAD_REPLY",
+      `server answered HTTP ${res.status} without a file (restart the BBS?)`,
+    );
+  }
+
   /** Pull events we have not seen, so the screen updates even if the socket lags. */
   private async catchUp(): Promise<void> {
     try {
@@ -398,7 +449,10 @@ export class LiveSource extends Base implements Source {
   }
 }
 
-const fault = (code: string, message: string): ActResult => ({
+const fault = (
+  code: string,
+  message: string,
+): { ok: false; error: RefusalError } => ({
   ok: false,
   error: {
     code,

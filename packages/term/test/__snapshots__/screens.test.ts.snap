@@ -316,7 +316,7 @@ exports[`snapshots: every screen (task 9) > thread arcade-snake 1`] = `
 
 
 
- ↑↓ scroll · R reply · N new task · X force done · Esc back · T tree
+ ↑↓ scroll · O open file · R reply · N new task · X force done · Esc back · T tree
 · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ "
 `;
 
@@ -348,7 +348,7 @@ exports[`snapshots: every screen (task 9) > thread websites-landing 1`] = `
 
 
 
- ↑↓ scroll · R reply · A answer · P approve · N deny · X force done · Esc back · T tree
+ ↑↓ scroll · O open file · R reply · A answer · P approve · N deny · X force done · Esc back · T tr…
 · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ "
 `;
 

@@ -155,6 +155,23 @@ function flow(
 
 const PATHS = /[\w.~@+-]*(?:\/[\w.~@+-]*)+/g;
 
+/** Where file paths sit in plain text: `[start, end)` string offsets, the same ones `paint` colours. */
+export function pathSpans(
+  text: string,
+): { start: number; end: number; path: string }[] {
+  return [...text.matchAll(PATHS)].flatMap((m) => {
+    const path = m[0].replace(/\.+$/, "");
+    return isPath(path)
+      ? [{ start: m.index, end: m.index + path.length, path }]
+      : [];
+  });
+}
+
+/** The distinct file paths a text names, in order. */
+export const pathsIn = (text: string): string[] => [
+  ...new Set(pathSpans(text).map((p) => p.path)),
+];
+
 /** Style a plain run, file paths in their own colour. */
 function paint(s: string, style: string): string {
   const back = `${ESC}[0${style ? `;${style}` : ""}m`;

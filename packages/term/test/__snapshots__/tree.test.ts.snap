@@ -28,6 +28,6 @@ exports[`needs-you monster > snapshot 1`] = `
 
 
 
- ↑↓ move · → open · ← fold · Enter full thread · R reply · N new task · B W S D L U · Esc menu
+ ↑↓ move · ←→ fold · Enter thread · O open file · R reply · N new task · B W S D L U · Esc menu
 · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ "
 `;
