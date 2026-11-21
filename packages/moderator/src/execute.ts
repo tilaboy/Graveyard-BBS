@@ -134,11 +134,12 @@ export async function execute(
         await io.runner.learn(a.lesson);
         break;
       case "cursor":
-        // Already exists after the first time: that refusal is expected, not an error.
-        await io.bbs.call("bbs_create_task", {
-          thread_id: CURSOR_THREAD,
-          text: "Moderator cursor (system)",
-        });
+        // Create the cursor thread once; asking again only earns an ACCESS DENIED note.
+        if (!a.exists)
+          await io.bbs.call("bbs_create_task", {
+            thread_id: CURSOR_THREAD,
+            text: "Moderator cursor (system)",
+          });
         await note(CURSOR_THREAD, `SYSTEM cursor ${a.seq}`);
         break;
     }

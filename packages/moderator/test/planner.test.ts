@@ -73,8 +73,21 @@ describe("R1/R8 routing and parallel start", () => {
       .task("mod-cursor", "x", "moderator")
       .task("unknown-thing", "x");
     expect(plan(initialState(), log.events, O).actions).toEqual([
-      { type: "cursor", seq: 2 },
+      { type: "cursor", seq: 2, exists: true },
     ]);
+  });
+
+  it("server replies on the cursor thread do not wake a new cursor write", () => {
+    const log = new Log().task("mod-cursor", "x", "moderator");
+    const first = plan(initialState(), log.events, O);
+    // The server's ACCESS DENIED note on mod-cursor, posted after our cursor note.
+    log.post(
+      "NOTE",
+      "mod-cursor",
+      "server",
+      "ACCESS DENIED · thread mod-cursor already exists",
+    );
+    expect(plan(first.state, log.events, O).actions).toEqual([]);
   });
 });
 

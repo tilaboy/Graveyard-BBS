@@ -28,7 +28,7 @@ export type Action =
   | { type: "check_gate"; thread: string }
   | { type: "escalate"; thread: string; text: string }
   | { type: "store_lesson"; lesson: HubLesson }
-  | { type: "cursor"; seq: number };
+  | { type: "cursor"; seq: number; exists?: boolean };
 
 export interface HubLesson extends Lesson {
   board: string;
@@ -440,8 +440,14 @@ export function plan(
   const fresh = log.filter((e) => e.seq > s.cursor);
   if (fresh.length) {
     s.cursor = Math.max(...fresh.map((e) => e.seq));
-    if (fresh.some((e) => e.caller !== self))
-      actions.push({ type: "cursor", seq: s.cursor });
+    // Only real work moves the stored cursor. Our own posts and anything on the cursor
+    // thread (its notes, the server's replies there) would otherwise wake us every minute.
+    if (fresh.some((e) => e.caller !== self && e.thread_id !== "mod-cursor"))
+      actions.push({
+        type: "cursor",
+        seq: s.cursor,
+        exists: Boolean(p.tasks["mod-cursor"]),
+      });
   }
   return { state: s, actions };
 }

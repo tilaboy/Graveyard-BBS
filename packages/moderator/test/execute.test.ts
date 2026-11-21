@@ -88,6 +88,12 @@ describe("executor against the real server", () => {
     const again = await step(s, w.io, o);
     expect(again.actions).toEqual([]);
     expect(w.runner.calls).toHaveLength(before);
+    // …and the cursor thread holds no ACCESS DENIED from re-creating it.
+    expect(
+      w.svc.p.tasks["mod-cursor"]!.posts.some((p) =>
+        p.text.includes("already exists"),
+      ),
+    ).toBe(false);
   });
 
   it("R10.1 a Sysop 'skip review' post becomes a spawn_steer and the task stays running", async () => {
