@@ -81,6 +81,7 @@ async function main(argv: string[]) {
   const dataDir = resolve(values["data-dir"]);
   const agentsFile = join(dataDir, "moderator-agents.json");
   const stateFile = join(dataDir, "moderator-state.json");
+  const respawnFile = join(dataDir, "moderator-respawn.json");
   const [cmd, thread, id] = positionals;
 
   if (cmd === "agent" && thread && id) {
@@ -88,50 +89,19 @@ async function main(argv: string[]) {
     return;
   }
   if (cmd === "respawn" && thread) {
-    // A spawn the planner already asked for but nobody made (e.g. the Crew session had no
-    // spawn_run): re-register the child, which rotates its token, and print the call again.
-    const url = process.env["GRAVEYARD_URL"] ?? "http://127.0.0.1:2626";
-    const token = process.env["GRAVEYARD_TOKEN"];
-    if (!token) throw new Error("GRAVEYARD_TOKEN is not set");
-    const bbs = http(url, token);
+    // A spawn that never became a live agent. A shell cannot call spawn_run, so this only
+    // QUEUES it; the next scheduled `step` (a Crew session) makes the call.
     const state = readJson<State | undefined>(stateFile, undefined);
-    const rec = state?.stages[thread];
-    if (!state || !rec) throw new Error(`no stage '${thread}' in ${stateFile}`);
-    if (readJson<Record<string, string>>(agentsFile, {})[thread])
-      throw new Error(`${thread} already has an agent id; not respawning`);
-    const log = await bbs.events();
-    const p = fold(log);
-    if (p.tasks[thread]?.status !== "pending")
-      throw new Error(
-        `${thread} is ${p.tasks[thread]?.status ?? "missing"}, not pending`,
-      );
-    const goal = `${p.tasks[rec.root]?.text ?? ""} ${p.tasks[thread]?.text ?? ""}`;
-    const crew = new KiroCrewRunner(readJson(agentsFile, {}));
-    const action = {
-      type: "spawn" as const,
-      thread,
-      handle: rec.handle,
-      role: rec.role,
-      resume: false,
-      lessons: selectLessons(
-        state.lessons,
-        goal,
-        thread.split("-")[0] ?? "",
-        thread,
-      ),
-    };
-    const r = await execute(
-      [action],
-      {
-        bbs,
-        runner: crew,
-        now: Date.now,
-        cwdOf: (t) => worktreeOf(dataDir, process.cwd(), p.tasks, t),
-      },
-      values.project,
-    );
+    if (!state?.stages[thread])
+      throw new Error(`no stage '${thread}' in ${stateFile}`);
+    const q = new Set(readJson<string[]>(respawnFile, []));
+    q.add(thread);
+    writeJson(respawnFile, [...q]);
+    const agents = readJson<Record<string, string>>(agentsFile, {});
+    delete agents[thread];
+    writeJson(agentsFile, agents);
     console.log(
-      JSON.stringify({ crew_calls: crew.calls, errors: r.errors }, null, 2),
+      `queued ${thread}; the next moderator-step spawns it with a fresh token.`,
     );
     return;
   }
@@ -159,22 +129,49 @@ async function main(argv: string[]) {
 
   const crew = new KiroCrewRunner(readJson(agentsFile, {}));
   const runner = values.runner === "cli" ? new KiroCliRunner() : crew;
-  const r = await step(
-    state,
-    {
-      bbs,
-      runner,
-      now: Date.now,
-      cwdOf: async (t) =>
-        worktreeOf(dataDir, process.cwd(), fold(await bbs.events()).tasks, t),
-      tasksMdOf: (root) => tasksMdOf(dataDir, root),
-    },
-    opts,
-  );
+  const io = {
+    bbs,
+    runner,
+    now: Date.now,
+    bbsUrl: url,
+    cwdOf: async (t: string) =>
+      worktreeOf(dataDir, process.cwd(), fold(await bbs.events()).tasks, t),
+    tasksMdOf: (root: string) => tasksMdOf(dataDir, root),
+  };
+  // Queued respawns (`moderator respawn <thread>`): stages whose earlier spawn never ran.
+  const queued = readJson<string[]>(respawnFile, []);
+  const errors: string[] = [];
+  if (queued.length) {
+    const p = fold(log);
+    const actions = queued.flatMap((t) => {
+      const rec = state.stages[t];
+      const st = p.tasks[t]?.status;
+      if (!rec || !st || st === "done" || st === "cancelled") return [];
+      const goal = `${p.tasks[rec.root]?.text ?? ""} ${p.tasks[t]?.text ?? ""}`;
+      return [
+        {
+          type: "spawn" as const,
+          thread: t,
+          handle: rec.handle,
+          role: rec.role,
+          resume: true,
+          lessons: selectLessons(state.lessons, goal, t.split("-")[0] ?? "", t),
+        },
+      ];
+    });
+    const done = await execute(actions, io, values.project);
+    errors.push(...done.errors);
+    writeJson(respawnFile, []);
+  }
+  const r = await step(state, io, opts);
   writeJson(stateFile, r.state);
   console.log(
     JSON.stringify(
-      { crew_calls: crew.calls, errors: r.errors, actions: r.actions.length },
+      {
+        crew_calls: crew.calls,
+        errors: [...errors, ...r.errors],
+        actions: r.actions.length,
+      },
       null,
       2,
     ),

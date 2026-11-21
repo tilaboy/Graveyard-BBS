@@ -40,7 +40,12 @@ function world() {
     events: () => Promise.resolve(svc.store.events()),
   };
   const runner = new KiroCrewRunner();
-  const io: Io = { bbs, runner, now: () => Date.UTC(2026, 9, 31, 23, 0, 0) };
+  const io: Io = {
+    bbs,
+    runner,
+    now: () => Date.UTC(2026, 9, 31, 23, 0, 0),
+    bbsUrl: "http://127.0.0.1:50914",
+  };
   return { svc, as, mod, bbs, runner, io };
 }
 
@@ -71,6 +76,11 @@ describe("executor against the real server", () => {
       '## lessons\n- "signup form has no alt text (review rejected)" (from graveyard-bbs/websites-landing-build)',
     );
     const token = /GRAVEYARD_TOKEN=(gy_[0-9a-f]+)/.exec(task)?.[1];
+    // The agent is told where THIS BBS is (its port changes per app start) and how to reach it.
+    expect(task).toContain("The BBS is at http://127.0.0.1:50914");
+    expect(task).toContain(
+      `POST http://127.0.0.1:50914/api/tools/<tool> with headers "authorization: Bearer ${token}"`,
+    );
     expect(w.svc.store.callerBySecret(token!)).toEqual({
       handle: "builder-arcade-bat-build",
       role: "builder",
