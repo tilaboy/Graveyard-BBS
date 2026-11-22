@@ -102,7 +102,8 @@ void (async () => {
     reducedMotion: matchMedia("(prefers-reduced-motion: reduce)").matches,
     write: (s) => term.write(s),
     effect: (e) => {
-      if (e.kind === "sound") audio.play(e.name);
+      if (e.kind === "unmute") audio.resume();
+      else if (e.kind === "sound") audio.play(e.name);
       else if (e.kind === "open")
         window.open(
           new URL(
@@ -117,6 +118,12 @@ void (async () => {
   session = live;
   picked.source.start();
   term.onData((d) => live.key(d));
+  // xterm sends plain "\r" for Ctrl+Enter; the new-task form submits on it, so send Ctrl+S instead.
+  term.attachCustomKeyEventHandler((ev) => {
+    if (ev.key !== "Enter" || !(ev.ctrlKey || ev.metaKey)) return true;
+    if (ev.type === "keydown") live.key("\x13");
+    return false;
+  });
   // File paths on screen are links: hover underlines, click opens the in-terminal file viewer.
   term.registerLinkProvider({
     provideLinks(y, done) {

@@ -20,13 +20,18 @@ import {
 import { pathsIn } from "./format.js";
 import type { Action, Source } from "./source.js";
 import { boardNames, newView, openAsks, type View } from "./state.js";
-import { BELL_REPEAT_MS, type SoundName } from "./theme.js";
+import { BELL_REPEAT_MS, LOGIN_AUTO_MS, type SoundName } from "./theme.js";
 
 /** How long a one-line notice stays before it clears itself. */
 export const FLASH_MS = 3000;
 
+/** Longest task text sent to the server. */
+const TEXT_MAX = 4000;
+
 export type Effect =
   | { kind: "sound"; name: SoundName }
+  /** Sound was turned on by a key press: the web client resumes its AudioContext here. */
+  | { kind: "unmute" }
   | { kind: "open"; url: string }
   | { kind: "close" };
 
@@ -55,8 +60,11 @@ const KEYS: [string, string][] = [
   ["\x1b[6~", "pgdn"],
   ["\x1b[H", "home"],
   ["\x1b[1~", "home"],
+  ["\x1b[Z", "shift-tab"],
   ["\x1b", "esc"],
   ["\r", "enter"],
+  ["\t", "tab"],
+  ["\x13", "ctrl-s"],
   ["\x7f", "backspace"],
   ["\b", "backspace"],
 ];
@@ -145,6 +153,8 @@ export class Session {
   needsTick(): boolean {
     return (
       !this.view.reducedMotion ||
+      // The login countdown, then entering the tree by itself (no animation under reduced motion).
+      this.view.screen === "login" ||
       (this.o.source.replay?.info().playing ?? false)
     );
   }
@@ -155,6 +165,9 @@ export class Session {
     this.o.source.advance(now - this.lastTick);
     this.lastTick = now;
     this.sync();
+    const v = this.view;
+    if (v.screen === "login" && now - (v.fx["login"] ?? now) >= LOGIN_AUTO_MS)
+      this.enter();
     // A one-line notice ("Created … (pending).") fades on its own after FLASH_MS.
     const f = this.view.flash;
     if (!f) this.flashSeen = undefined;
@@ -271,11 +284,17 @@ export class Session {
       delete v.denied;
       return;
     }
+    if (v.form) return this.formKey(k);
     if (v.input) return this.typing(k);
     delete v.flash;
     if (k === "m" || k === "M") {
       v.muted = !v.muted;
-      if (!v.muted && v.screen === "login") this.sound("modem");
+      if (!v.muted) {
+        // This key press is the user gesture that lets the browser start audio.
+        this.o.effect?.({ kind: "unmute" });
+        this.sound("chime");
+        if (v.screen === "login") this.sound("modem");
+      }
       return;
     }
     const rc = this.o.source.replay;
@@ -289,11 +308,7 @@ export class Session {
       if (k === "home") return rc.restart();
     }
     if (v.screen === "login") {
-      this.go("tree");
-      if (openAsks(this.o.source.state()).length > 0) {
-        this.lastBell = v.now;
-        this.sound("bell");
-      }
+      this.enter();
       if (k === "n" || k === "N") this.startNewTask();
       return;
     }
@@ -423,6 +438,15 @@ export class Session {
     }
   }
 
+  /** Leave the login splash for the tree. ASKs already open ring once, unless the bell is ringing. */
+  private enter(): void {
+    this.go("tree");
+    if (openAsks(this.o.source.state()).length > 0 && !this.lastBell) {
+      this.lastBell = this.view.now;
+      this.sound("bell");
+    }
+  }
+
   /** Back to the start tree from anywhere; the stack starts over. */
   private home(): void {
     this.stack.length = 0;
@@ -493,13 +517,10 @@ export class Session {
   private typing(k: string): void {
     const i = this.view.input;
     if (!i) return;
-    if (k === "esc") {
-      delete this.view.input;
-      delete this.view.newTask;
-    } else if (k === "backspace") i.buf = [...i.buf].slice(0, -1).join("");
+    if (k === "esc") delete this.view.input;
+    else if (k === "backspace") i.buf = [...i.buf].slice(0, -1).join("");
     else if (k === "enter") {
       delete this.view.input;
-      if (this.view.newTask) return this.newTaskStep(i.buf.trim());
       const text = i.buf.trim();
       if (text && i.reply)
         void this.run(
@@ -627,6 +648,7 @@ export class Session {
     const v = this.view;
     return (
       !v.input &&
+      !v.form &&
       !v.denied &&
       ["tree", "thread", "paths", "file"].includes(v.screen)
     );
@@ -645,7 +667,7 @@ export class Session {
     if (thread) void this.openFile(thread, path);
   }
 
-  /** [N] on the menu: board, title, body, then the existing create_task command (the server checks the role). */
+  /** [N]: open the new-task form; the board is the one here (or the first), selected. */
   private startNewTask(): void {
     const v = this.view;
     const s = this.o.source.state();
@@ -653,54 +675,125 @@ export class Session {
       v.screen === "tree"
         ? treeRows(s, v)[treeCursor(treeRows(s, v), v)]?.board
         : v.board;
-    const first = here ?? boardNames(s)[0] ?? "general";
-    this.view.newTask = { step: "board", board: first, title: "" };
-    this.view.input = {
-      prompt: `New task: board [${first}]`,
-      buf: "",
-      thread: "",
-      ask: "",
+    const board = here ?? boardNames(s)[0] ?? "general";
+    v.form = {
+      field: "board",
+      board,
+      fresh: true,
+      title: "",
+      body: "",
+      scroll: 0,
     };
   }
 
-  private newTaskStep(line: string): void {
+  /**
+   * Keys while the form is open. Tab / Shift+Tab move between fields; Ctrl+S (web: also
+   * Ctrl+Enter) or Enter on [ Submit ] sends; Esc cancels, asking first if something was typed.
+   * A paste arrives as many keys at once: newlines in Board and Title move on, in Body they stay.
+   */
+  private formKey(k: string): void {
     const v = this.view;
-    const n = v.newTask;
-    if (!n) return;
-    const next = (prompt: string) =>
-      (v.input = { prompt, buf: "", thread: "", ask: "" });
-    if (n.step === "board") {
-      const board = line.toLowerCase() || n.board;
-      if (!/^[a-z0-9]+$/.test(board)) {
-        delete v.newTask;
-        v.flash = "Board names are letters and digits only. Task not created.";
-        return;
-      }
-      Object.assign(n, { step: "title", board });
-      next(`New task on #${board}: title`);
-    } else if (n.step === "title") {
-      const slug = slugOf(line);
-      if (!slug) {
-        delete v.newTask;
-        v.flash = "A title is needed. Task not created.";
-        return;
-      }
-      Object.assign(n, { step: "body", title: line });
-      next("Body (optional, Enter to skip)");
-    } else {
-      delete v.newTask;
-      const s = this.o.source.state();
-      const base = `${n.board}-${slugOf(n.title)}`;
-      let thread = base;
-      for (let i = 2; s.p.tasks[thread]; i++) thread = `${base}-${i}`;
-      const text = stripUnsafe(line ? `${n.title} — ${line}` : n.title).slice(
-        0,
-        4000,
-      );
-      void this.run({ type: "createTask", thread, text }, "new task", () => {
-        this.view.flash = `Created ${thread} (pending).`;
-      });
+    const f = v.form;
+    if (!f) return;
+    if (f.confirm) {
+      if (k === "y" || k === "Y") delete v.form;
+      else delete f.confirm;
+      return;
     }
+    const order = ["board", "title", "body", "submit"] as const;
+    const step = (d: number) =>
+      (f.field =
+        order[(order.indexOf(f.field) + d + order.length) % order.length]!);
+    const ch = [...k].length === 1 ? stripUnsafe(k) : "";
+    const drop = (s: string) => [...s].slice(0, -1).join("");
+    if (k === "esc") {
+      if (f.title || f.body || !f.fresh) f.confirm = true;
+      else delete v.form;
+      return;
+    }
+    if (k === "tab") return void step(1);
+    if (k === "shift-tab") return void step(-1);
+    if (k === "ctrl-s") return this.submitForm();
+    if (f.error?.field === f.field) delete f.error;
+    switch (f.field) {
+      case "board": {
+        const list = boardNames(this.o.source.state());
+        if (k === "enter") step(1);
+        else if ((k === "up" || k === "down") && list.length > 0) {
+          const i = list.indexOf(f.board);
+          const j =
+            i < 0 ? 0 : (i + (k === "up" ? -1 : 1) + list.length) % list.length;
+          Object.assign(f, { board: list[j], fresh: true });
+        } else if (k === "backspace")
+          Object.assign(f, {
+            board: f.fresh ? "" : drop(f.board),
+            fresh: false,
+          });
+        else if (ch)
+          Object.assign(f, {
+            board: (f.fresh ? "" : f.board) + ch,
+            fresh: false,
+          });
+        return;
+      }
+      case "title":
+        if (k === "enter") step(1);
+        else if (k === "backspace") f.title = drop(f.title);
+        else if (ch) f.title += ch;
+        return;
+      case "body":
+        if (k === "up") f.scroll += 1;
+        else if (k === "down") f.scroll = Math.max(0, f.scroll - 1);
+        else {
+          if (k === "backspace") f.body = drop(f.body);
+          else if (f.body.length >= TEXT_MAX) return;
+          else if (k === "enter") f.body += "\n";
+          else if (ch) f.body += ch;
+          f.scroll = 0; // typing shows the end
+        }
+        return;
+      default:
+        if (k === "enter") this.submitForm();
+    }
+  }
+
+  /** Check the fields (errors show inline, on the field), then the existing create_task action. */
+  private submitForm(): void {
+    const v = this.view;
+    const f = v.form;
+    if (!f) return;
+    const board = f.board.trim().toLowerCase();
+    const title = f.title.trim();
+    if (!/^[a-z0-9]+$/.test(board)) {
+      f.error = {
+        field: "board",
+        text: "Board names are letters and digits only.",
+      };
+      f.field = "board";
+      return;
+    }
+    if (!slugOf(title)) {
+      f.error = {
+        field: "title",
+        text: "A title is needed (letters or digits).",
+      };
+      f.field = "title";
+      return;
+    }
+    delete v.form;
+    const s = this.o.source.state();
+    const base = `${board}-${slugOf(title)}`;
+    let thread = base;
+    for (let i = 2; s.p.tasks[thread]; i++) thread = `${base}-${i}`;
+    // Blank lines at either end go; the newlines inside stay.
+    const body = f.body.replace(/^\s*\n|\s+$/g, "");
+    const text = stripUnsafe(body ? `${title} — ${body}` : title).slice(
+      0,
+      TEXT_MAX,
+    );
+    void this.run({ type: "createTask", thread, text }, "new task", () => {
+      this.view.flash = `Created ${thread} (pending).`;
+    });
   }
 
   /** Send a Sysop action. A refusal opens the ACCESS DENIED box and plays the organ chord. */

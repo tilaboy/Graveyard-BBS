@@ -124,8 +124,10 @@ describe("BBS basics on a real server", () => {
     src.start();
     await until(() => src.state().p.tasks["crypts-first"] !== undefined);
     session.key("N"); // on the login splash
-    expect(plain(out.at(-1) ?? "")).toContain("New task: board [");
-    session.key("Vaults\rOpen the vault\rBring a torch\r");
+    expect(plain(out.at(-1) ?? "")).toContain(
+      "New task · whisper it to the crypt",
+    );
+    session.key("Vaults\rOpen the vault\rBring a torch\x13");
     await until(() => svc.p.tasks["vaults-open-the-vault"] !== undefined);
     expect(svc.p.tasks["vaults-open-the-vault"]?.status).toBe("pending");
     await until(

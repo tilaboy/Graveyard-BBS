@@ -121,6 +121,13 @@ const MAKE: Record<SoundName, () => Float32Array<ArrayBuffer>> = {
     addNoise(o, 0.05, 0.6, 0.25, noise(99), 0.25);
     return clip(o);
   },
+  /** Sound on: two short rising candle-bell notes (A5, E6), so [M] is heard at once. */
+  chime() {
+    const o = buf(0.6);
+    addTone(o, 0, 0.35, 880, 0.35, 0.15);
+    addTone(o, 0.12, 0.45, 1318.5, 0.3, 0.18);
+    return clip(o);
+  },
 };
 
 export function synth(name: SoundName): Float32Array<ArrayBuffer> {

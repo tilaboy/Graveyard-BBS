@@ -110,6 +110,7 @@ than 3 times per second.
 | `done` | coffin lid thud |
 | New lesson | wind howl, soft |
 | Log out | `NO CARRIER` click + static |
+| Sound turned on (`[M]`) | short two-note chime |
 
 All sounds are **synthesised by us** (Web Audio / generated WAV in `assets/sounds/`).
 No third-party sound files or music (hackathon rule). Sound is **off until the user turns it

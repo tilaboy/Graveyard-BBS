@@ -142,7 +142,7 @@ describe("spec 04: the terminal on a real server", () => {
     });
     src.start();
     session.key("xn"); // leave login, new task
-    session.key("websites\rOpen the crypt\rBring candles\r");
+    session.key("websites\rOpen the crypt\rBring candles\x13");
     await until(() => svc.p.tasks["websites-open-the-crypt"] !== undefined);
     expect(svc.p.tasks["websites-open-the-crypt"]?.status).toBe("pending");
     expect(svc.p.tasks["websites-open-the-crypt"]?.text).toBe(
@@ -164,7 +164,7 @@ describe("spec 04: the terminal on a real server", () => {
       reducedMotion: true,
     });
     session.key("xn");
-    session.key("websites\rNot allowed\r\r");
+    session.key("websites\rNot allowed\x13");
     await until(() => plain(out.at(-1) ?? "").includes("ACCESS DENIED"));
     expect(plain(out.at(-1) ?? "")).toContain("ROLE_DENIED");
     expect(svc.p.tasks["websites-not-allowed"]).toBeUndefined();

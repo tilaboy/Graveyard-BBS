@@ -123,8 +123,12 @@ export const SOUNDS = [
   "thud",
   "wind",
   "nocarrier",
+  "chime",
 ] as const;
 export type SoundName = (typeof SOUNDS)[number];
 
 /** `???` bell repeats until the Sysop answers. */
 export const BELL_REPEAT_MS = 60_000;
+
+/** The login splash enters the tree by itself after this long with no key. */
+export const LOGIN_AUTO_MS = 4000;

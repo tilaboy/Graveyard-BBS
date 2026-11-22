@@ -31,8 +31,17 @@ import {
   boardOf,
   type State,
   type View,
+  type NewTaskForm,
 } from "./state.js";
-import { COLOR, EMOJI, MOTION, POST_COLOR, STATUS, WORDS } from "./theme.js";
+import {
+  COLOR,
+  EMOJI,
+  LOGIN_AUTO_MS,
+  MOTION,
+  POST_COLOR,
+  STATUS,
+  WORDS,
+} from "./theme.js";
 import { formatBody } from "./format.js";
 import { z } from "zod";
 
@@ -74,6 +83,10 @@ function login(s: State, v: View): string[] {
         sgr(COLOR.dim, BAT)
       : "";
   const n = online(s).length;
+  const left = Math.max(
+    1,
+    Math.ceil((LOGIN_AUTO_MS - (v.now - (v.fx["login"] ?? v.now))) / 1000),
+  );
   return [
     bat,
     ...lines.map((l) => `  ${l}`),
@@ -83,7 +96,61 @@ function login(s: State, v: View): string[] {
     `  Node 1 · 14400 baud · ${n} caller${n === 1 ? "" : "s"} ${WORDS.online}`,
     `  ${EMOJI.lesson} Bulletins: ${s.lessons.length} new lesson${s.lessons.length === 1 ? "" : "s"}`,
     "",
-    sgr(COLOR.dim, "  Press any key to enter… (any key skips the animation)"),
+    sgr(COLOR.dim, `  Press any key to enter… entering in ${left}…`),
+    "",
+    ...boardSummary(s, v),
+  ];
+}
+
+/** Login summary: per board and in total, tasks by status, open ASKs and stalled tasks. */
+export function boardSummary(s: State, v: View): string[] {
+  const tasks = threadsOf(s); // the tree's task set: top-level tasks and their stages
+  if (tasks.length === 0)
+    return [`  ${EMOJI.idle} The crypt is empty. Press N to post a task.`];
+  const asks = openAsks(s);
+  const cols: [string, string, (b?: string) => number][] = [
+    ...(
+      ["pending", "running", "blocked", "awaiting-review", "done"] as const
+    ).map((st): [string, string, (b?: string) => number] => [
+      STATUS[st].emoji,
+      st === "awaiting-review" ? "review" : st,
+      (b) =>
+        tasks.filter(
+          (t) => t.status === st && (!b || boardOf(t.thread_id) === b),
+        ).length,
+    ]),
+    [
+      EMOJI.monster,
+      "needs you",
+      (b) => asks.filter((a) => !b || boardOf(a.thread) === b).length,
+    ],
+    [
+      "⚠",
+      "stalled",
+      (b) =>
+        tasks.filter(
+          (t) =>
+            stalledMin(s, t) !== undefined &&
+            (!b || boardOf(t.thread_id) === b),
+        ).length,
+    ],
+  ];
+  const names = boardNames(s);
+  const bw = Math.max(8, ...names.map((b) => b.length + 3));
+  const full = cols.map(([e, w]) => `${e} ${w}`);
+  // Narrow screens drop the words and keep the emoji.
+  const wide = 2 + bw + full.reduce((n, h) => n + vlen(h) + 2, 0) <= v.cols;
+  const heads = wide ? full : cols.map(([e]) => e);
+  const cw = heads.map((h) => vlen(h) + 2);
+  const row = (label: string, b?: string) =>
+    `  ${pad(label, bw)}${cols.map(([, , f], i) => pad(String(f(b)), cw[i]!)).join("")}`;
+  return [
+    sgr(
+      COLOR.bold,
+      `  ${pad("board", bw)}${heads.map((h, i) => pad(h, cw[i]!)).join("")}`,
+    ),
+    ...names.map((b) => row(`#${b}`, b)),
+    sgr(COLOR.bold, row("total")),
   ];
 }
 
@@ -813,7 +880,7 @@ function bye(): string[] {
 // ---- frame ----------------------------------------------------------------
 
 const HELP: Record<string, string> = {
-  login: "any key: enter",
+  login: "any key: enter · N new task · M sound",
   tree: "↑↓ move · ←→ fold · Enter thread · O open file · R reply · N new task · B W S D L U · Esc menu",
   menu: "KEYS (no mouse): B boards W who S sysop D doors L log U news N new task",
   boards: "↑↓ select · Enter open · N new task · Esc back",
@@ -909,6 +976,105 @@ function overlay(v: View): string[] {
   ).map((l) => shake + "  " + l);
 }
 
+// ---- new-task form (a box over the current screen) -------------------------
+
+/** Body lines the form shows at most before it scrolls. */
+export const FORM_BODY_ROWS = 12;
+export const FORM_HELP =
+  "Tab next field · Shift+Tab back · Ctrl+S or Ctrl+Enter submit · Esc cancel";
+
+/** The end of `s` that fits `n` cells, so the cursor stays in view. */
+function tail(s: string, n: number): string {
+  const ch = [...s];
+  let out = "";
+  for (let i = ch.length - 1; i >= 0; i--) {
+    if (vlen(ch[i]! + out) > n) break;
+    out = ch[i]! + out;
+  }
+  return out;
+}
+
+function formBox(s: State, f: NewTaskForm, v: View, room: number): string[] {
+  const width = Math.min(v.cols - 4, 76);
+  const cw = width - 4; // inside the border, one space each side
+  const on = (fl: NewTaskForm["field"]) => f.field === fl;
+  const label = (fl: NewTaskForm["field"], t: string) =>
+    on(fl)
+      ? sgr(`${COLOR.sysop};${COLOR.bold}`, pad(t, 7))
+      : sgr(COLOR.dim, pad(t, 7));
+  const input = (fl: NewTaskForm["field"], text: string, sel = false) => {
+    const n = cw - 9;
+    const cur = on(fl) ? "█" : "";
+    const shown = tail(text, n - vlen(cur));
+    const body = sel && on(fl) ? sgr(COLOR.inverse, shown) : shown;
+    const br = (b: string) => sgr(on(fl) ? COLOR.sysop : COLOR.dim, b);
+    return `${br("[")}${pad(body + cur, n)}${br("]")}`;
+  };
+  const err = (fl: "board" | "title") =>
+    f.error?.field === fl
+      ? [sgr(COLOR.error, `       ${EMOJI.refusal} ${f.error.text}`)]
+      : [];
+  const boards = boardNames(s);
+  const pick = boards.length
+    ? [
+        `       ${sgr(COLOR.dim, "↑↓")} ${boards
+          .map((b) =>
+            b === f.board
+              ? sgr(`${COLOR.sysop};${COLOR.bold}`, `#${b}`)
+              : sgr(COLOR.dim, `#${b}`),
+          )
+          .join(
+            " ",
+          )}${boards.includes(f.board.toLowerCase()) ? "" : sgr(COLOR.dim, "  (new board)")}`,
+      ]
+    : [
+        sgr(
+          COLOR.dim,
+          "       (type a board name; it is created with the task)",
+        ),
+      ];
+  const fixed = 9 + pick.length + err("board").length + err("title").length;
+  const rows = Math.max(3, Math.min(FORM_BODY_ROWS, room - fixed));
+  const wrapped = wrap(f.body + (on("body") ? "█" : ""), cw - 2);
+  const scroll = Math.min(f.scroll, Math.max(0, wrapped.length - rows));
+  const end = wrapped.length - scroll;
+  const shown = wrapped.slice(Math.max(0, end - rows), end);
+  const gutter = sgr(on("body") ? COLOR.sysop : COLOR.dim, "┊ ");
+  const above = Math.max(0, end - rows);
+  const bodyHead = `${label("body", "Body")}${sgr(COLOR.dim, "Enter = new line")}${
+    above || scroll
+      ? sgr(COLOR.dim, `  (↑ ${above} · ↓ ${scroll} more, ↑↓ scroll)`)
+      : ""
+  }`;
+  const submit = on("submit")
+    ? sgr(`${COLOR.sysop};${COLOR.inverse}`, "[ Submit ]")
+    : sgr(COLOR.sysop, "[ Submit ]");
+  const buttons = f.confirm
+    ? sgr(
+        `${COLOR.error};${COLOR.bold}`,
+        "Discard this task? Y discard · any other key keeps it",
+      )
+    : `${" ".repeat(Math.max(0, cw - 24))}${submit}  ${sgr(COLOR.dim, "Esc cancel")}`;
+  const lines = [
+    "",
+    `${label("board", "Board")}${input("board", f.board, f.fresh)}`,
+    ...pick,
+    ...err("board"),
+    `${label("title", "Title")}${input("title", f.title)}`,
+    ...err("title"),
+    bodyHead,
+    ...shown.map((l) => gutter + l),
+    ...Array<string>(rows - shown.length).fill(gutter),
+    "",
+    buttons,
+  ].map((l) => ` ${l}`);
+  return box(lines, width, {
+    double: true,
+    style: COLOR.sysop,
+    title: `${EMOJI.sysop} New task · whisper it to the crypt`,
+  });
+}
+
 const TITLES: Record<string, string> = {
   login: "login",
   tree: "boards tree",
@@ -984,15 +1150,25 @@ export function render(s: State, v: View): string {
     ...Array<string>(Math.max(0, bodyRoom - body.length)).fill(""),
     ...ov,
   ];
+  if (v.form) {
+    const fb = formBox(s, v.form, v, bodyRoom);
+    const top = Math.max(0, Math.floor((body.length - fb.length) / 2));
+    const left = " ".repeat(
+      Math.max(0, Math.floor((v.cols - vlen(fb[0] ?? "")) / 2)),
+    );
+    fb.slice(0, body.length).forEach((l, i) => (body[top + i] = left + l));
+  }
   const left = ` ${sgr(`${COLOR.sysop};${COLOR.bold}`, "GRAVEYARD BBS")} ${sgr(COLOR.dim, `· ${TITLES[v.screen] ?? v.screen}`)}`;
   const right = sgr(COLOR.dim, `sound ${v.muted ? "off" : "on"} [M] `);
   const header =
     left + " ".repeat(Math.max(1, v.cols - vlen(left) - vlen(right))) + right;
-  const help = v.input
-    ? ` ${sgr(COLOR.ask, `${v.input.prompt}> `)}${v.input.buf}█`
-    : v.flash
-      ? ` ${v.flash}`
-      : sgr(COLOR.dim, ` ${helpFor(s, v)}`);
+  const help = v.form
+    ? sgr(COLOR.dim, ` ${FORM_HELP}`)
+    : v.input
+      ? ` ${sgr(COLOR.ask, `${v.input.prompt}> `)}${v.input.buf}█`
+      : v.flash
+        ? ` ${v.flash}`
+        : sgr(COLOR.dim, ` ${helpFor(s, v)}`);
   const foot = v.replay ? hud(v, s.runId) : [fog(v)];
   const rows = [header, ...body, help, ...foot].map((l) => truncate(l, v.cols));
   return `${ESC}[?25l${ESC}[H${rows.map((l) => `${l}${RESET}${ESC}[K`).join("\r\n")}${ESC}[J`;

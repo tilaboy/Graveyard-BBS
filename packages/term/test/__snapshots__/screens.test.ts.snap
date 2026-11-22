@@ -206,7 +206,13 @@ exports[`snapshots: every screen (task 9) > login  1`] = `
   Node 1 · 14400 baud · 4 callers haunting
   🪦 Bulletins: 0 new lessons
 
-  Press any key to enter… (any key skips the animation)
+  Press any key to enter… entering in 4…
+
+  board      🌙 pending  🔥 running  🔒 blocked  🔮 review  ✅ done  🧟 needs you  ⚠ stalled  
+  #arcade    0           0           0           0          1        0             0          
+  #slides    0           1           0           0          0        0             0          
+  #websites  0           0           1           0          0        1             0          
+  total      0           1           1           0          1        1             0          
 
 
 
@@ -214,13 +220,7 @@ exports[`snapshots: every screen (task 9) > login  1`] = `
 
 
 
-
-
-
-
-
-
- any key: enter
+ any key: enter · N new task · M sound
 · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ ·· ▒ · ░░ · · ░ "
 `;
 

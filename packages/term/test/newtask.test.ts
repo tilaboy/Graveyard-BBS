@@ -10,6 +10,8 @@ import {
   World,
 } from "./helpers.js";
 
+const FORM = "New task · whisper it to the crypt";
+
 const start = () => {
   const f = fakeSource(stateOf(threeThreads()));
   const out: string[] = [];
@@ -37,19 +39,23 @@ describe("web client key mapping (xterm onData -> Session)", () => {
       "up",
     ]);
   });
+  it("maps Tab, Shift+Tab and Ctrl+S (the form keys)", () => {
+    expect(parseKeys("\t\x1b[Z\x13")).toEqual(["tab", "shift-tab", "ctrl-s"]);
+  });
 });
 
 describe("[N] new task works wherever the help line says so", () => {
-  it("on the login splash: the key enters the menu AND opens the prompt (was swallowed)", () => {
+  it("on the login splash: the key enters the tree AND opens the form", () => {
     const { s, screen } = start();
     s.key("N");
-    expect(screen()).toContain("New task: board [");
+    expect(screen()).toContain(FORM);
+    expect(screen()).toContain("boards tree");
   });
-  it.each(["n", "N"])("accepts %s on the menu", (k) => {
+  it.each(["n", "N"])("accepts %s on the tree", (k) => {
     const { s, screen } = start();
     s.key("x");
     s.key(k);
-    expect(screen()).toContain("New task: board [");
+    expect(screen()).toContain(FORM);
   });
   it.each([
     ["boards", "b"],
@@ -63,13 +69,14 @@ describe("[N] new task works wherever the help line says so", () => {
     s.key(key);
     expect(screen()).toContain("N new task");
     s.key("N");
-    expect(screen()).toContain("New task: board [");
+    expect(screen()).toContain(FORM);
   });
-  it("on a board's thread list it defaults to that board", () => {
-    const { s, screen } = start();
+  it("on a board's thread list it defaults to that board", async () => {
+    const { s, acts } = start();
     s.key("xb\r");
-    s.key("n");
-    expect(screen()).toMatch(/New task: board \[(websites|arcade)\]/);
+    s.key("n\tGhost\x13");
+    await settle();
+    expect(acts[0]).toMatchObject({ thread: "arcade-ghost" });
   });
   it("on the Sysop queue and a thread with an open ASK, N still denies", async () => {
     const { s, acts } = start();
@@ -99,7 +106,120 @@ describe("[N] new task works wherever the help line says so", () => {
     s.key("xb\r\r"); // boards -> threads -> thread
     expect(plain(out.at(-1) ?? "")).toContain("N new task");
     s.key("N");
-    expect(plain(out.at(-1) ?? "")).toContain("New task: board [");
+    expect(plain(out.at(-1) ?? "")).toContain(FORM);
+  });
+});
+
+describe("new-task form: a box with Board, Title, Body and [ Submit ]", () => {
+  it("lists the existing boards and shows the form keys", () => {
+    const { s, screen } = start();
+    s.key("xn");
+    expect(screen()).toContain("#arcade #slides #websites");
+    expect(screen()).toContain("[ Submit ]");
+    expect(screen()).toContain("Ctrl+S or Ctrl+Enter submit");
+  });
+  it("Tab order is Board → Title → Body → Submit → Board; Shift+Tab goes back", () => {
+    const { s } = start();
+    s.key("xn");
+    const field = () => s.view.form?.field;
+    expect(field()).toBe("board");
+    const seen = [];
+    for (let i = 0; i < 4; i++) {
+      s.key("\t");
+      seen.push(field());
+    }
+    expect(seen).toEqual(["title", "body", "submit", "board"]);
+    s.key("\x1b[Z");
+    expect(field()).toBe("submit");
+  });
+  it("↑↓ on Board picks an existing board; typing replaces the suggestion", () => {
+    const { s } = start();
+    s.key("xn"); // tree cursor is on #arcade
+    s.key("\x1b[B");
+    expect(s.view.form?.board).toBe("slides");
+    s.key("\x1b[A\x1b[A");
+    expect(s.view.form?.board).toBe("websites");
+    s.key("crypts");
+    expect(s.view.form?.board).toBe("crypts");
+  });
+  it("Ctrl+S submits the exact text, a multi-line body keeps its newlines", async () => {
+    const { s, acts } = start();
+    s.key("xn");
+    s.key("websites\tFix the moat!\t");
+    for (const k of "Deep water") s.key(k);
+    s.key("\r");
+    s.key("\r");
+    for (const k of "- no sharks") s.key(k);
+    s.key("\x13");
+    await settle();
+    expect(acts).toEqual([
+      {
+        type: "createTask",
+        thread: "websites-fix-the-moat",
+        text: "Fix the moat! — Deep water\n\n- no sharks",
+      },
+    ]);
+  });
+  it("a paste with newlines lands whole in Body", async () => {
+    const { s, acts } = start();
+    s.key("xn\tPasted\t");
+    s.key("line one\rline two\r\rline four"); // xterm turns pasted \n into \r
+    expect(s.view.form?.body).toBe("line one\nline two\n\nline four");
+    s.key("\t\r"); // Tab to [ Submit ], Enter
+    await settle();
+    expect(acts[0]).toMatchObject({
+      thread: "arcade-pasted",
+      text: "Pasted — line one\nline two\n\nline four",
+    });
+  });
+  it("Enter in Body is a new line, not a submit", async () => {
+    const { s, acts } = start();
+    s.key("xn\tTitle\t\r\r");
+    await settle();
+    expect(acts).toEqual([]);
+    expect(s.view.form?.body).toBe("\n\n");
+  });
+  it("a long body scrolls inside the box and shows how much is hidden", () => {
+    const { s, screen } = start();
+    s.key("xn\tLong\t");
+    s.key(Array.from({ length: 30 }, (_, i) => `row ${i}`).join("\r"));
+    expect(screen()).toContain("row 29");
+    expect(screen()).not.toContain("row 0 ");
+    expect(screen()).toMatch(/↑ \d+ · ↓ 0 more/);
+    for (let i = 0; i < 40; i++) s.key("\x1b[A");
+    expect(screen()).toContain("row 0");
+  });
+  it("Esc with nothing typed closes at once", () => {
+    const { s, screen } = start();
+    s.key("xn\x1b");
+    expect(s.view.form).toBeUndefined();
+    expect(screen()).not.toContain(FORM);
+  });
+  it("Esc after typing asks 'discard?': any key keeps it, Y discards", async () => {
+    const { s, acts, screen } = start();
+    s.key("xn\tHalf done\x1b");
+    expect(screen()).toContain("Discard this task?");
+    s.key("x"); // keep editing
+    expect(screen()).not.toContain("Discard this task?");
+    expect(s.view.form?.title).toBe("Half done");
+    s.key("\x1bY");
+    expect(s.view.form).toBeUndefined();
+    await settle();
+    expect(acts).toEqual([]);
+  });
+  it("a bad board or an empty title shows an error inline and keeps the form", async () => {
+    const { s, acts, screen } = start();
+    s.key("xn");
+    s.key("bad board\tTitle\x13");
+    expect(screen()).toContain("Board names are letters and digits only.");
+    expect(s.view.form?.field).toBe("board");
+    s.key("\x7f\x7f\x7f\x7f\x7f\x7f"); // "bad"
+    s.key("\t");
+    s.key("\x7f\x7f\x7f\x7f\x7f!!\x13");
+    expect(screen()).toContain("A title is needed");
+    expect(s.view.form?.field).toBe("title");
+    await settle();
+    expect(acts).toEqual([]);
   });
 });
 
@@ -107,7 +227,7 @@ describe("new task: a board that does not exist yet", () => {
   it("creates <newboard>-<slug>, so the board appears with its first thread", async () => {
     const { s, acts, screen } = start();
     s.key("N"); // from login
-    s.key("Crypts\rDig the grave\rWith a spade\r");
+    s.key("Crypts\rDig the grave\rWith a spade\x13");
     await settle();
     expect(acts).toEqual([
       {
@@ -134,10 +254,9 @@ describe("the 'Created … (pending).' notice clears itself", () => {
     const screen = () => plain(out.at(-1) ?? "");
     s.key("x");
     s.key("n");
-    s.key("\r"); // default board
+    s.key("\t"); // default board
     for (const c of "Ghost") s.key(c);
-    s.key("\r");
-    s.key("\r"); // no body
+    s.key("\x13");
     await settle();
     s.tick();
     expect(screen()).toContain("(pending).");

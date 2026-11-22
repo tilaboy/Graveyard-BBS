@@ -88,8 +88,8 @@ export interface View {
     ask: string;
     reply?: boolean;
   };
-  /** Sysop "new task" prompt flow (board, title, body); `input` holds the line being typed. */
-  newTask?: { step: "board" | "title" | "body"; board: string; title: string };
+  /** Sysop [N] new-task form, drawn as a box over the current screen. */
+  form?: NewTaskForm;
   flash?: string;
   replay?: ReplayInfo;
   /**
@@ -101,6 +101,21 @@ export interface View {
   paths?: { thread: string; list: string[] };
   /** File viewer: what `GET /api/files/<thread>` returned. `scroll` is the top line. */
   file?: { thread: string; content: FileContent };
+}
+
+export interface NewTaskForm {
+  field: "board" | "title" | "body" | "submit";
+  board: string;
+  /** The suggested board is "selected": the first letter typed replaces it, Backspace clears it. */
+  fresh: boolean;
+  title: string;
+  /** Keeps its newlines. Typing always goes at the end. */
+  body: string;
+  /** Body lines scrolled up from the bottom. */
+  scroll: number;
+  error?: { field: "board" | "title"; text: string };
+  /** Esc after typing: "Discard this task?" is showing. */
+  confirm?: boolean;
 }
 
 export const newView = (o: Partial<View> = {}): View => ({
