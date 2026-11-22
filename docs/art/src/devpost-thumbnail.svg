@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="1500" height="1000" viewBox="0 0 1500 1000">
+  <!-- Devpost thumbnail (3:2): big centred banner and tagline, a three-board tree with one needs-you row. -->
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0b0614"/>
+      <stop offset="0.6" stop-color="#22123a"/>
+      <stop offset="1" stop-color="#3a1d3a"/>
+    </linearGradient>
+    <radialGradient id="moonGlow" r="50%">
+      <stop offset="0" stop-color="#fff3c4" stop-opacity="0.4"/>
+      <stop offset="1" stop-color="#fff3c4" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="crtGlass" cx="50%" cy="45%" r="75%">
+      <stop offset="0" stop-color="#0d1a12"/>
+      <stop offset="1" stop-color="#020403"/>
+    </radialGradient>
+    <pattern id="scan" width="4" height="4" patternUnits="userSpaceOnUse">
+      <rect width="4" height="1.5" fill="#000" opacity="0.35"/>
+    </pattern>
+    <filter id="bglow" x="-5%" y="-30%" width="110%" height="160%">
+      <feGaussianBlur stdDeviation="0.4" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="fog" x="-50%" y="-200%" width="200%" height="500%"><feGaussianBlur stdDeviation="30"/></filter>
+    <path id="banner" d="BANNER"/>
+    <path id="bat" d="M0,0 q10,-14 22,-6 q4,-8 8,0 q4,-8 8,0 q12,-8 22,6 q-14,-2 -20,8 q-6,-6 -10,2 q-4,-8 -10,-2 q-6,-10 -20,-8 z"/>
+    <style>
+      .m { font-family: Menlo, Monaco, "SF Mono", monospace; white-space: pre; }
+      .e { font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif; }
+    </style>
+  </defs>
+
+  <rect width="1500" height="1000" fill="url(#sky)"/>
+  <g fill="#e9e2ff" opacity="0.8">
+    <circle cx="80" cy="50" r="2"/><circle cx="330" cy="30" r="1.6"/><circle cx="620" cy="46" r="2"/>
+    <circle cx="900" cy="28" r="1.6"/><circle cx="40" cy="400" r="1.6"/><circle cx="1470" cy="460" r="2"/>
+  </g>
+  <circle cx="1400" cy="80" r="170" fill="url(#moonGlow)"/>
+  <circle cx="1400" cy="80" r="50" fill="#f6efc8"/>
+  <circle cx="1385" cy="68" r="9" fill="#e3d9a8"/><circle cx="1418" cy="98" r="11" fill="#e3d9a8"/>
+  <g fill="#07040b"><use href="#bat" transform="translate(1220,40) scale(1.1)"/></g>
+
+  <g fill="#0a0710">
+    <path d="M0,1000 V930 Q250,900 500,920 T1000,915 T1500,905 V1000 Z"/>
+    <path d="M50,940 V860 A42,42 0 0 1 134,860 V940 Z"/>
+    <path d="M1380,930 V858 h18 v-28 h16 v28 h18 v18 h-18 v54 h-16 v-54 h-18 Z"/>
+  </g>
+  <g filter="url(#fog)" fill="#c9b8e8" opacity="0.18"><ellipse cx="750" cy="950" rx="800" ry="40"/></g>
+
+  <!-- banner: 77 units x 15 = 1155 px, centred -->
+  <g transform="translate(172,110) scale(15)">
+    <use href="#banner" x="0.35" y="0.35" fill="#7a1010"/>
+    <use href="#banner" fill="#ff8700" filter="url(#bglow)"/>
+  </g>
+  <g class="m" text-anchor="middle" font-weight="bold" font-size="60">
+    <text x="750" y="320" fill="#ffffff">Agents are the callers.</text>
+    <text x="750" y="396" fill="#ff8700">You are the Sysop.</text>
+  </g>
+
+  <!-- terminal with the board tree -->
+  <g transform="translate(170,450)">
+    <rect width="1160" height="430" rx="28" fill="#2a2733" stroke="#0a0910" stroke-width="4"/>
+    <rect x="20" y="18" width="1120" height="394" rx="18" fill="url(#crtGlass)"/>
+    <g class="m" font-size="32" fill="#c0c0c0">
+      <text x="56" y="82" fill="#ffffff" font-weight="bold">▾ #websites</text>
+      <text x="110" y="136" class="e">🔥</text><text x="160" y="136" fill="#ff8700">running</text>
+      <text x="520" y="136" fill="#ffffff">Haunted landing page</text>
+
+      <text x="56" y="196" fill="#ffffff" font-weight="bold">▾ #arcade</text>
+      <rect x="84" y="210" width="1030" height="50" rx="6" fill="#ffff55" opacity="0.2"/>
+      <text x="110" y="248" class="e">🔒</text><text x="160" y="248" fill="#ffff55">blocked</text>
+      <text x="520" y="248" fill="#ffff55" font-weight="bold">arcade-test spec</text>
+      <text x="866" y="250" class="e" font-size="36">🧟</text>
+      <text x="916" y="248" fill="#ffff55" font-weight="bold">needs you</text>
+
+      <text x="56" y="310" fill="#ffffff" font-weight="bold">▾ #slides</text>
+      <text x="110" y="364" class="e">🔮</text><text x="160" y="364" fill="#c678dd">awaiting-review</text>
+      <text x="520" y="364" fill="#ffffff">Kiroween pitch deck</text>
+    </g>
+    <rect x="20" y="18" width="1120" height="394" rx="18" fill="url(#scan)"/>
+    <rect x="20" y="18" width="1120" height="394" rx="18" fill="none" stroke="#55ff55" stroke-opacity="0.12" stroke-width="10"/>
+  </g>
+  <text x="750" y="960" class="m" text-anchor="middle" font-size="26" fill="#c8c0d8">Kiroween 2026 · Built with Kiro</text>
+</svg>

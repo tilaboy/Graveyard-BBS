@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- Graveyard BBS app icon: a tombstone that is also a CRT, with the orange Sysop cursor. -->
+  <defs>
+    <radialGradient id="sky" cx="70%" cy="20%" r="95%">
+      <stop offset="0" stop-color="#3a2052"/>
+      <stop offset="0.55" stop-color="#170c24"/>
+      <stop offset="1" stop-color="#07040b"/>
+    </radialGradient>
+    <linearGradient id="stone" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8b8898"/>
+      <stop offset="0.5" stop-color="#5a5768"/>
+      <stop offset="1" stop-color="#2e2c38"/>
+    </linearGradient>
+    <radialGradient id="screen" cx="50%" cy="55%" r="70%">
+      <stop offset="0" stop-color="#14261a"/>
+      <stop offset="1" stop-color="#030604"/>
+    </radialGradient>
+    <radialGradient id="moonGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#fff6cc" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#fff6cc" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="scan" width="8" height="8" patternUnits="userSpaceOnUse">
+      <rect width="8" height="3" fill="#000" opacity="0.45"/>
+    </pattern>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="9" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <clipPath id="tile"><rect width="512" height="512" rx="116"/></clipPath>
+    <clipPath id="screenClip"><path d="M152,404 V244 A104,104 0 0 1 360,244 V404 Z"/></clipPath>
+  </defs>
+  <g clip-path="url(#tile)">
+    <rect width="512" height="512" fill="url(#sky)"/>
+    <!-- stars -->
+    <g fill="#e9e2ff">
+      <circle cx="70" cy="86" r="3"/><circle cx="140" cy="54" r="2"/><circle cx="210" cy="96" r="2.5"/>
+      <circle cx="96" cy="170" r="2"/><circle cx="455" cy="230" r="2.5"/><circle cx="300" cy="44" r="2"/>
+    </g>
+    <!-- moon -->
+    <circle cx="398" cy="112" r="110" fill="url(#moonGlow)"/>
+    <circle cx="398" cy="112" r="54" fill="#f6efc8"/>
+    <circle cx="380" cy="98" r="10" fill="#e3d9a8"/><circle cx="414" cy="132" r="13" fill="#e3d9a8"/>
+    <circle cx="420" cy="92" r="6" fill="#e3d9a8"/>
+    <!-- bat -->
+    <path d="M300,150 q10,-14 22,-6 q4,-8 8,0 q4,-8 8,0 q12,-8 22,6 q-14,-2 -20,8 q-6,-6 -10,2 q-4,-8 -10,-2 q-6,-10 -20,-8 z" fill="#07040b"/>
+    <!-- ground -->
+    <ellipse cx="256" cy="520" rx="330" ry="90" fill="#0c1a10"/>
+    <!-- tombstone CRT -->
+    <rect x="92" y="420" width="328" height="44" rx="10" fill="#2a2833"/>
+    <rect x="92" y="420" width="328" height="10" rx="5" fill="#6d6a7c"/>
+    <path d="M118,428 V240 A138,138 0 0 1 394,240 V428 Z" fill="url(#stone)" stroke="#1d1b24" stroke-width="6"/>
+    <path d="M128,236 A128,128 0 0 1 230,112" fill="none" stroke="#b9b5c8" stroke-width="6" stroke-linecap="round" opacity="0.6"/>
+    <!-- screen -->
+    <path d="M152,404 V244 A104,104 0 0 1 360,244 V404 Z" fill="url(#screen)" stroke="#121018" stroke-width="8"/>
+    <g clip-path="url(#screenClip)">
+      <g filter="url(#glow)">
+        <polyline points="184,262 236,302 184,342" fill="none" stroke="#ff8700" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/>
+        <rect x="258" y="318" width="70" height="30" rx="4" fill="#ff8700"/>
+      </g>
+      <rect x="140" y="140" width="240" height="280" fill="url(#scan)"/>
+    </g>
+    <!-- grass -->
+    <path d="M60,470 l10,-26 l6,26 l8,-34 l8,34 l10,-22 l4,22 Z M400,468 l8,-30 l6,30 l10,-24 l6,24 l8,-32 l6,32 Z" fill="#1f4a28"/>
+  </g>
+</svg>

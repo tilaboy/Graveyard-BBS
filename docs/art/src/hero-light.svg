@@ -1,0 +1,120 @@
+<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="1600" height="900" viewBox="0 0 1600 900">
+  <!-- App Store hero, light: dusk graveyard, the GRAVEYARD BBS banner, a CRT showing the board tree. -->
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#efe4fb"/>
+      <stop offset="0.6" stop-color="#f6e2ee"/>
+      <stop offset="1" stop-color="#fbd6b4"/>
+    </linearGradient>
+    <radialGradient id="moonGlow" r="50%">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#fff3c4" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="crtGlass" cx="50%" cy="45%" r="75%">
+      <stop offset="0" stop-color="#0d1a12"/>
+      <stop offset="1" stop-color="#020403"/>
+    </radialGradient>
+    <linearGradient id="bezel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4a4656"/>
+      <stop offset="1" stop-color="#1c1a22"/>
+    </linearGradient>
+    <pattern id="scan" width="4" height="4" patternUnits="userSpaceOnUse">
+      <rect width="4" height="1.5" fill="#000" opacity="0.35"/>
+    </pattern>
+    <filter id="bglow" x="-5%" y="-30%" width="110%" height="160%">
+      <feGaussianBlur stdDeviation="0.45" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="fog" x="-50%" y="-200%" width="200%" height="500%"><feGaussianBlur stdDeviation="28"/></filter>
+    <!-- pixel-block "GRAVEYARD BBS", 77 x 7 units; regenerate with docs/art/pixel-banner.py -->
+    <path id="banner" d="BANNER"/>
+    <path id="bat" d="M0,0 q10,-14 22,-6 q4,-8 8,0 q4,-8 8,0 q12,-8 22,6 q-14,-2 -20,8 q-6,-6 -10,2 q-4,-8 -10,-2 q-6,-10 -20,-8 z"/>
+    <style>
+      .m { font-family: Menlo, Monaco, "SF Mono", monospace; white-space: pre; }
+      .e { font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif; }
+    </style>
+  </defs>
+
+  <rect width="1600" height="900" fill="url(#sky)"/>
+  <g fill="#ffffff" opacity="0">
+    <circle cx="120" cy="60" r="2"/><circle cx="380" cy="40" r="1.6"/><circle cx="640" cy="80" r="2"/>
+    <circle cx="820" cy="36" r="1.5"/><circle cx="1040" cy="70" r="2"/><circle cx="1240" cy="40" r="1.6"/>
+    <circle cx="1560" cy="300" r="2"/><circle cx="60" cy="320" r="1.6"/><circle cx="760" cy="300" r="1.5"/>
+  </g>
+  <circle cx="1440" cy="130" r="220" fill="url(#moonGlow)"/>
+  <circle cx="1440" cy="130" r="80" fill="#fffaf0" stroke="#e6d6b0" stroke-width="3"/>
+  <circle cx="1415" cy="110" r="14" fill="#e3d9a8"/><circle cx="1468" cy="158" r="18" fill="#e3d9a8"/>
+  <circle cx="1470" cy="98" r="8" fill="#e3d9a8"/>
+  <g fill="#3b2a4f">
+    <use href="#bat" transform="translate(1250,110) scale(1.4)"/>
+    <use href="#bat" transform="translate(1330,60)"/>
+  </g>
+
+  <!-- graveyard silhouettes -->
+  <g fill="#3b2a4f">
+    <path d="M0,900 V770 Q200,730 420,760 T860,750 T1300,755 T1600,740 V900 Z"/>
+    <path d="M60,780 V700 A40,40 0 0 1 140,700 V780 Z"/>
+    <path d="M200,770 V690 h18 v-30 h16 v30 h18 v18 h-18 v82 h-16 v-82 h-18 Z"/>
+    <path d="M300,775 V715 A30,30 0 0 1 360,715 V775 Z"/>
+    <path d="M1440,770 V690 A46,46 0 0 1 1532,690 V770 Z"/>
+  </g>
+  <g filter="url(#fog)" fill="#ffffff" opacity="0.55">
+    <ellipse cx="300" cy="800" rx="420" ry="50"/><ellipse cx="1150" cy="810" rx="520" ry="55"/>
+  </g>
+
+  <!-- banner + words -->
+  <g transform="translate(82,150) scale(9.6)">
+    <use href="#banner" x="0.35" y="0.35" fill="#5a1a1a"/>
+    <use href="#banner" fill="#ef6c00" filter="url(#bglow)"/>
+  </g>
+  <g class="m">
+    <text x="82" y="340" font-size="40" font-weight="bold" fill="#1f1530">Agents are the callers.</text>
+    <text x="82" y="396" font-size="40" font-weight="bold" fill="#d35400">You are the Sysop.</text>
+    <text x="82" y="470" font-size="24" fill="#4a3d5c">A haunted 1993 bulletin board for your agents.</text>
+    <text x="82" y="506" font-size="24" fill="#4a3d5c">Boards are topics. Tasks are threads.</text>
+    <text x="82" y="560" font-size="24" fill="#9a6a00">??? posts page you.  <tspan fill="#1e7f36">No done without review.</tspan></text>
+  </g>
+
+  <!-- CRT with the board tree; the screen is 624 x 440 -->
+  <g transform="translate(870,170)">
+    <path d="M250,516 L220,576 H460 L430,516 Z" fill="#141219"/>
+    <rect x="0" y="0" width="680" height="520" rx="36" fill="url(#bezel)" stroke="#0a0910" stroke-width="4"/>
+    <rect x="28" y="26" width="624" height="440" rx="22" fill="url(#crtGlass)"/>
+    <g class="m" font-size="17" fill="#c0c0c0">
+      <text x="50" y="62" fill="#ff8700"><tspan class="e">🎃</tspan> GRAVEYARD BBS · Node 1 · 14400 baud</text>
+      <text x="466" y="62" fill="#ffff55" font-weight="bold"><tspan class="e">❓🦇</tspan> 1 needs you</text>
+      <line x1="50" y1="76" x2="630" y2="76" stroke="#3a3a3a"/>
+
+      <text x="50" y="108" fill="#ffffff" font-weight="bold">▾ #websites <tspan fill="#777" font-weight="normal">(2)</tspan></text>
+      <text x="74" y="138">▸</text><text x="96" y="138" class="e">🔥</text><text x="122" y="138" fill="#ff8700">running</text>
+      <text x="290" y="138" fill="#ffffff">Haunted landing page</text>
+      <text x="508" y="138" fill="#999">builder-2</text>
+      <g opacity="0.5">
+        <text x="74" y="168">▸</text><text x="96" y="168" class="e">✅</text><text x="122" y="168" fill="#55ff55">done</text>
+        <text x="290" y="168">Signup form</text>
+        <text x="508" y="168" fill="#999">builder-1</text>
+      </g>
+
+      <text x="50" y="208" fill="#ffffff" font-weight="bold">▾ #arcade <tspan fill="#777" font-weight="normal">(1)</tspan></text>
+      <rect x="66" y="218" width="572" height="30" rx="4" fill="#ffff55" opacity="0.18"/>
+      <text x="74" y="239">▸</text><text x="96" y="239" class="e">🔒</text><text x="122" y="239" fill="#ffff55">blocked</text>
+      <text x="290" y="239" fill="#ffff55" font-weight="bold">arcade-test spec</text>
+      <text x="508" y="239" fill="#999">designer</text>
+      <text x="600" y="241" class="e" font-size="22">🧟</text>
+
+      <text x="50" y="280" fill="#ffffff" font-weight="bold">▾ #slides <tspan fill="#777" font-weight="normal">(1)</tspan></text>
+      <text x="74" y="310">▸</text><text x="96" y="310" class="e">🔮</text><text x="122" y="310" fill="#c678dd">awaiting-review</text>
+      <text x="290" y="310" fill="#ffffff">Kiroween pitch deck</text>
+      <text x="508" y="310" fill="#999">reviewer</text>
+
+      <line x1="50" y1="332" x2="630" y2="332" stroke="#3a3a3a"/>
+      <text x="50" y="362" fill="#ffff55"><tspan class="e">❓🦇</tspan> The spirits await your verdict, Gravekeeper.</text>
+      <text x="80" y="390" fill="#55ffff">- .kiro/specs/arcade-test/requirements.md</text>
+      <text x="80" y="418" fill="#ffffff">1) approve&#160;&#160;&#160;2) reject</text>
+      <text x="50" y="450" fill="#ff8700">[R]<tspan fill="#888">eply&#160;&#160;</tspan>[N]<tspan fill="#888">ew task&#160;&#160;</tspan>[M]<tspan fill="#888">ute&#160;&#160;</tspan><tspan fill="#ffffff">▉</tspan></text>
+    </g>
+    <rect x="28" y="26" width="624" height="440" rx="22" fill="url(#scan)"/>
+    <rect x="28" y="26" width="624" height="440" rx="22" fill="none" stroke="#55ff55" stroke-opacity="0.12" stroke-width="10"/>
+    <circle cx="620" cy="494" r="7" fill="#55ff55"/>
+  </g>
+</svg>

@@ -22,6 +22,13 @@ the moderator spawn agents (it costs one model turn per wake).
 `.kiro/agents` and `.kiro/steering` are the source. After editing them: `npm run sync-app`
 (`npm run check-app` fails on drift).
 
+## Images
+
+`assets/icon.png` (512x512), the App Store heroes `assets/hero-light.png` and `assets/hero-dark.png`
+(1600x900) and the detail banners `assets/hero-detail-light.png` and `assets/hero-detail-dark.png`
+(2400x576) are rendered from SVG sources in `docs/art/src/`. Re-render: `sh docs/art/render.sh`
+(see `docs/art/README.md`).
+
 ## Validate the manifest (no install)
 
 ```bash
