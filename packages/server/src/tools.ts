@@ -456,14 +456,25 @@ export function buildTools(): Tool[] {
       (c, a) =>
         c.actor.role !== "sysop" && c.actor.role !== "moderator"
           ? denyRole(c, "create tasks")
-          : cmd(c, {
-              type: "create_task",
-              actor: c.actor,
-              thread_id: a.thread_id,
-              text: a.text,
-              ...(a.assigned ? { assigned: a.assigned } : {}),
-              ...(a.parent ? { parent: a.parent } : {}),
-            }),
+          : !a.parent &&
+              a.thread_id !== "mod-cursor" &&
+              !c.svc.boards[boardOf(a.thread_id)]
+            ? fail(
+                "NOT_FOUND",
+                `no board #${boardOf(a.thread_id)}`,
+                `Pick one of: ${Object.keys(c.svc.boards)
+                  .sort()
+                  .map((b) => `#${b}`)
+                  .join(", ")}.`,
+              )
+            : cmd(c, {
+                type: "create_task",
+                actor: c.actor,
+                thread_id: a.thread_id,
+                text: a.text,
+                ...(a.assigned ? { assigned: a.assigned } : {}),
+                ...(a.parent ? { parent: a.parent } : {}),
+              }),
     ),
     tool(
       "bbs_check_gate",

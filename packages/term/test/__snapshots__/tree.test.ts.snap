@@ -6,12 +6,12 @@ exports[`needs-you monster > snapshot 1`] = `
 
 ▶ ▾ #arcade  (1)
       ▸ ✅ done           Small door game                        builder-2   
-  ▾ #slides  (1)
-      ▸ 🔥 running        Pitch deck                             builder-1   
   ▾ #websites  (1)
       ▸ 🔒 blocked        Haunted landing page                   builder-1    🧟       needs you
-
-
+  ▾ #slides  (1)
+      ▸ 🔥 running        Pitch deck                             builder-1   
+  ▾ #media  (0)
+  ▾ #bugfix  (0)
 
 
 

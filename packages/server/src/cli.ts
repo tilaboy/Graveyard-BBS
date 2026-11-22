@@ -12,6 +12,7 @@ import { exportRun } from "./export.js";
 import * as hookcli from "./hookcli.js";
 import { createMcpServer, httpBackend } from "./mcp.js";
 import { createDemoRepo, seed } from "./seed.js";
+import * as sysop from "./sysop.js";
 
 const env = {
   url: process.env["GRAVEYARD_URL"] ?? "http://127.0.0.1:2626",
@@ -23,6 +24,7 @@ const USAGE = `usage: graveyard <command>
   replay <bundle> [--speed N]              play a recorded run in this terminal
   caller add <handle> --role <role>        print a new token once
   caller rotate <handle> [--save]          replace a caller's token; print it once, or save it to .graveyard/<handle>-token
+  task cancel <thread> [reason]            Sysop: cancel a task and its stages (kept in the log, hidden)
   mcp                                      MCP stdio server (proxies to GRAVEYARD_URL)
   hook pre-tool|spawn|stop                 Kiro hook entry points (event JSON on stdin)
   seed [demo] [--repo DIR] [--lease S]     demo callers, threads and a clean demo repo
@@ -188,6 +190,28 @@ async function main(argv: string[]): Promise<number> {
       process.stdout.write(r.stdout);
       process.stderr.write(r.stderr);
       return r.code;
+    }
+    case "task": {
+      // Sysop cleanup from the shell: `graveyard task cancel <thread> [reason]`. The task and its
+      // stages become `cancelled` (kept in the log, hidden from the tree).
+      const id = positionals[1] ?? "";
+      if (sub !== "cancel" || !id) {
+        console.error("usage: graveyard task cancel <thread> [reason]");
+        return 1;
+      }
+      const svc = openService(process.cwd());
+      const actor = { handle: "sysop", role: "sysop" as const };
+      const reason = positionals.slice(2).join(" ") || "cleared by the Sysop";
+      let bad = 0;
+      for (const { thread, r } of sysop.cancelTree(svc, actor, id, reason)) {
+        console.error(
+          r.ok
+            ? `cancelled ${thread}`
+            : `${thread}: ${r.error.code} ${r.error.message}`,
+        );
+        if (!r.ok) bad++;
+      }
+      return bad ? 1 : 0;
     }
     case "seed": {
       const overrides: Parameters<typeof openService>[1] = { ...lease };

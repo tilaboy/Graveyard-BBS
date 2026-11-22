@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { FLASH_MS, Session, parseKeys } from "../src/session.js";
+import { boardNames } from "../src/state.js";
 import {
   fakeSource,
   plain,
@@ -111,10 +112,10 @@ describe("[N] new task works wherever the help line says so", () => {
 });
 
 describe("new-task form: a box with Board, Title, Body and [ Submit ]", () => {
-  it("lists the existing boards and shows the form keys", () => {
+  it("lists the five boards and shows the form keys", () => {
     const { s, screen } = start();
     s.key("xn");
-    expect(screen()).toContain("#arcade #slides #websites");
+    expect(screen()).toContain("#arcade #websites #slides #media #bugfix");
     expect(screen()).toContain("[ Submit ]");
     expect(screen()).toContain("Ctrl+S or Ctrl+Enter submit");
   });
@@ -132,20 +133,24 @@ describe("new-task form: a box with Board, Title, Body and [ Submit ]", () => {
     s.key("\x1b[Z");
     expect(field()).toBe("submit");
   });
-  it("↑↓ on Board picks an existing board; typing replaces the suggestion", () => {
+  it("Board is a picker: ↑↓ cycle the five, a letter jumps, nothing else can be typed", () => {
     const { s } = start();
     s.key("xn"); // tree cursor is on #arcade
     s.key("\x1b[B");
-    expect(s.view.form?.board).toBe("slides");
-    s.key("\x1b[A\x1b[A");
     expect(s.view.form?.board).toBe("websites");
-    s.key("crypts");
-    expect(s.view.form?.board).toBe("crypts");
+    s.key("\x1b[A\x1b[A");
+    expect(s.view.form?.board).toBe("bugfix");
+    s.key("m");
+    expect(s.view.form?.board).toBe("media");
+    s.key("S");
+    expect(s.view.form?.board).toBe("slides");
+    s.key("qxz\x7f"); // letters no board starts with, and Backspace: no change
+    expect(s.view.form?.board).toBe("slides");
   });
   it("Ctrl+S submits the exact text, a multi-line body keeps its newlines", async () => {
     const { s, acts } = start();
     s.key("xn");
-    s.key("websites\tFix the moat!\t");
+    s.key("w\tFix the moat!\t");
     for (const k of "Deep water") s.key(k);
     s.key("\r");
     s.key("\r");
@@ -207,14 +212,16 @@ describe("new-task form: a box with Board, Title, Body and [ Submit ]", () => {
     await settle();
     expect(acts).toEqual([]);
   });
-  it("a bad board or an empty title shows an error inline and keeps the form", async () => {
+  it("a board outside the five or an empty title shows an error inline and keeps the form", async () => {
     const { s, acts, screen } = start();
     s.key("xn");
-    s.key("bad board\tTitle\x13");
-    expect(screen()).toContain("Board names are letters and digits only.");
+    s.view.form!.board = "games"; // the picker cannot reach this; submit still refuses it
+    s.key("\tTitle\x13");
+    expect(screen()).toContain(
+      "Pick one of: #arcade, #websites, #slides, #media, #bugfix.",
+    );
     expect(s.view.form?.field).toBe("board");
-    s.key("\x7f\x7f\x7f\x7f\x7f\x7f"); // "bad"
-    s.key("\t");
+    s.key("a\t"); // pick #arcade
     s.key("\x7f\x7f\x7f\x7f\x7f!!\x13");
     expect(screen()).toContain("A title is needed");
     expect(s.view.form?.field).toBe("title");
@@ -223,20 +230,19 @@ describe("new-task form: a box with Board, Title, Body and [ Submit ]", () => {
   });
 });
 
-describe("new task: a board that does not exist yet", () => {
-  it("creates <newboard>-<slug>, so the board appears with its first thread", async () => {
+describe("new task: only the five boards", () => {
+  it("typing a board name that does not exist cannot leave the five", async () => {
     const { s, acts, screen } = start();
     s.key("N"); // from login
-    s.key("Crypts\rDig the grave\rWith a spade\x13");
+    s.key("Games");
+    expect(boardNames()).toContain(s.view.form?.board);
+    s.key("\rDig the grave\rWith a spade\x13");
     await settle();
-    expect(acts).toEqual([
-      {
-        type: "createTask",
-        thread: "crypts-dig-the-grave",
-        text: "Dig the grave — With a spade",
-      },
-    ]);
-    expect(screen()).toContain("Created crypts-dig-the-grave (pending).");
+    expect(acts).toHaveLength(1);
+    const thread = (acts[0] as { thread: string }).thread;
+    expect(thread).not.toMatch(/^games-/);
+    expect(boardNames()).toContain(thread.split("-")[0]);
+    expect(screen()).toContain(`Created ${thread} (pending).`);
   });
 });
 

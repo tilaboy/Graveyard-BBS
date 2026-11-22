@@ -4,10 +4,10 @@ exports[`snapshots: every screen (task 9) > boards  1`] = `
 " GRAVEYARD BBS · boards                                                               sound off [M] 
   board         open   total  busy doors
 ▶ #arcade       0      1      — 💤 idle
-  #slides       1      1      —
   #websites     1      1      —
-
-
+  #slides       1      1      —
+  #media        0      0      —
+  #bugfix       0      0      —
 
 
 
@@ -210,11 +210,11 @@ exports[`snapshots: every screen (task 9) > login  1`] = `
 
   board      🌙 pending  🔥 running  🔒 blocked  🔮 review  ✅ done  🧟 needs you  ⚠ stalled  
   #arcade    0           0           0           0          1        0             0          
-  #slides    0           1           0           0          0        0             0          
   #websites  0           0           1           0          0        1             0          
+  #slides    0           1           0           0          0        0             0          
+  #media     0           0           0           0          0        0             0          
+  #bugfix    0           0           0           0          0        0             0          
   total      0           1           1           0          1        1             0          
-
-
 
 
 

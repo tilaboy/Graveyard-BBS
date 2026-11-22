@@ -56,21 +56,27 @@ describe("snapshots: every screen (task 9)", () => {
 });
 
 describe("R5.1 / R4.1 themed lines keep their plain fact", () => {
-  it("the thread list shows emoji AND status name for every status", () => {
+  it("the thread list shows emoji AND status name for every status (cancelled is hidden)", () => {
     const st = {
       ...s,
       p: {
         ...s.p,
         tasks: Object.fromEntries(
           STATUSES.map((status, i) => [
-            `b-${i}`,
-            { ...s.p.tasks["websites-landing"]!, thread_id: `b-${i}`, status },
+            `websites-${i}`,
+            {
+              ...s.p.tasks["websites-landing"]!,
+              thread_id: `websites-${i}`,
+              status,
+            },
           ]),
         ),
       },
     };
-    const out = frame(st, { screen: "threads", board: "b", ...still });
-    for (const status of STATUSES) expect(out).toContain(status);
+    const out = frame(st, { screen: "threads", board: "websites", ...still });
+    for (const status of STATUSES.filter((x) => x !== "cancelled"))
+      expect(out).toContain(status);
+    expect(out).not.toContain("cancelled");
     for (const e of [
       EMOJI.pending,
       EMOJI.running,

@@ -105,8 +105,10 @@ function login(s: State, v: View): string[] {
 /** Login summary: per board and in total, tasks by status, open ASKs and stalled tasks. */
 export function boardSummary(s: State, v: View): string[] {
   const tasks = threadsOf(s); // the tree's task set: top-level tasks and their stages
-  if (tasks.length === 0)
-    return [`  ${EMOJI.idle} The crypt is empty. Press N to post a task.`];
+  const empty =
+    tasks.length === 0
+      ? ["", `  ${EMOJI.idle} The crypt is empty. Press N to post a task.`]
+      : [];
   const asks = openAsks(s);
   const cols: [string, string, (b?: string) => number][] = [
     ...(
@@ -135,7 +137,7 @@ export function boardSummary(s: State, v: View): string[] {
         ).length,
     ],
   ];
-  const names = boardNames(s);
+  const names = boardNames();
   const bw = Math.max(8, ...names.map((b) => b.length + 3));
   const full = cols.map(([e, w]) => `${e} ${w}`);
   // Narrow screens drop the words and keep the emoji.
@@ -151,6 +153,7 @@ export function boardSummary(s: State, v: View): string[] {
     ),
     ...names.map((b) => row(`#${b}`, b)),
     sgr(COLOR.bold, row("total")),
+    ...empty,
   ];
 }
 
@@ -194,7 +197,7 @@ function menu(s: State, v: View): string[] {
 // ---- boards / threads ------------------------------------------------------
 
 function boards(s: State, v: View): string[] {
-  const names = boardNames(s);
+  const names = boardNames();
   const doors = (b: string) =>
     Object.values(s.p.locks)
       .filter((l) => l.holder && boardOf(l.holder.thread) === b)
@@ -205,11 +208,10 @@ function boards(s: State, v: View): string[] {
       COLOR.bold,
       `  ${pad("board", 14)}${pad("open", 7)}${pad("total", 7)}busy doors`,
     ),
-    ...(names.length === 0 ? [`  ${EMOJI.idle} No boards yet.`] : []),
     ...names.map((b, i) => {
       const ts = threadsOf(s, b);
       const open = ts.filter(isOpen).length;
-      const idle = open === 0 ? ` ${EMOJI.idle} idle` : "";
+      const idle = ts.length > 0 && open === 0 ? ` ${EMOJI.idle} idle` : "";
       return `${sel(v, i)}${pad(`#${b}`, 14)}${pad(String(open), 7)}${pad(String(ts.length), 7)}${doors(b) || "—"}${idle}`;
     }),
   ];
@@ -240,7 +242,7 @@ function threads(s: State, v: View): string[] {
       COLOR.bold,
       `  #${v.board ?? ""}  ${ts.length} thread${ts.length === 1 ? "" : "s"}`,
     ),
-    ...(ts.length === 0 ? [`  ${EMOJI.idle} Nothing new on this board.`] : []),
+    ...(ts.length === 0 ? [`  ${EMOJI.idle} No tasks yet. Press N.`] : []),
     ...ts.map((t, i) => threadRow(t, v, i, v.cols)),
   ];
 }
@@ -522,7 +524,7 @@ export function treeRows(s: State, v: View): TreeRow[] {
   const out: TreeRow[] = [];
   const open = v.tree.open;
   const tw = Math.max(10, v.cols - 62);
-  for (const b of boardNames(s)) {
+  for (const b of boardNames()) {
     const bOpen = open[`b:${b}`] !== false;
     const { tasks, more, needs } = treeTasks(s, b);
     const top = threadsOf(s, b).filter(
@@ -1014,25 +1016,16 @@ function formBox(s: State, f: NewTaskForm, v: View, room: number): string[] {
     f.error?.field === fl
       ? [sgr(COLOR.error, `       ${EMOJI.refusal} ${f.error.text}`)]
       : [];
-  const boards = boardNames(s);
-  const pick = boards.length
-    ? [
-        `       ${sgr(COLOR.dim, "↑↓")} ${boards
-          .map((b) =>
-            b === f.board
-              ? sgr(`${COLOR.sysop};${COLOR.bold}`, `#${b}`)
-              : sgr(COLOR.dim, `#${b}`),
-          )
-          .join(
-            " ",
-          )}${boards.includes(f.board.toLowerCase()) ? "" : sgr(COLOR.dim, "  (new board)")}`,
-      ]
-    : [
-        sgr(
-          COLOR.dim,
-          "       (type a board name; it is created with the task)",
-        ),
-      ];
+  const boards = boardNames();
+  const pick = [
+    `       ${sgr(COLOR.dim, "↑↓ or a letter")} ${boards
+      .map((b) =>
+        b === f.board
+          ? sgr(`${COLOR.sysop};${COLOR.bold}`, `#${b}`)
+          : sgr(COLOR.dim, `#${b}`),
+      )
+      .join(" ")}`,
+  ];
   const fixed = 9 + pick.length + err("board").length + err("title").length;
   const rows = Math.max(3, Math.min(FORM_BODY_ROWS, room - fixed));
   const wrapped = wrap(f.body + (on("body") ? "█" : ""), cw - 2);

@@ -50,7 +50,7 @@ describe("navigation", () => {
     const t = replaySession(threeThreads());
     t.session.key("x");
     t.advance(60_000);
-    t.session.key("b\x1b[B\r\r");
+    t.session.key("b\x1b[B\x1b[B\r\r"); // boards: arcade, websites, slides
     expect(t.last()).toContain("slides-pitch");
     expect(t.last()).toContain("Six slides");
   });
@@ -192,7 +192,7 @@ describe("R3.3 / task 23 [X] force done is refused with the voice line", () => {
     t.session.key("x");
     t.session.key("m"); // sound on
     t.advance(60_000);
-    t.session.key("b\x1b[B\r\r"); // boards → #slides → slides-pitch (running)
+    t.session.key("b\x1b[B\x1b[B\r\r"); // boards → #slides → slides-pitch (running)
     t.session.key("x");
     await settle();
     expect(t.last()).toContain(
@@ -260,7 +260,7 @@ describe("Sysop [N] new task", () => {
     const { s, acts, screen } = start();
     s.key("n");
     expect(screen()).toContain("Board  [arcade");
-    s.key("websites\rFix the moat!\rDeep water\x13");
+    s.key("w\rFix the moat!\rDeep water\x13");
     await settle();
     expect(acts).toEqual([
       {
@@ -281,14 +281,16 @@ describe("Sysop [N] new task", () => {
       "arcade-snake-2",
     ]);
   });
-  it("Esc, an empty title or a bad board creates nothing", async () => {
+  it("Esc, an empty title or a board outside the five creates nothing", async () => {
     const { s, acts, screen } = start();
     s.key("n\x1b");
     s.key("n\r\x13");
     expect(screen()).toContain("A title is needed");
     s.key("\x1b"); // nothing typed: closes
-    s.key("nbad board\x13");
-    expect(screen()).toContain("letters and digits only");
+    s.key("n");
+    s.view.form!.board = "games"; // unreachable by keys; submit still refuses it
+    s.key("\rTitle\x13");
+    expect(screen()).toContain("Pick one of: #arcade");
     await settle();
     expect(acts).toEqual([]);
   });

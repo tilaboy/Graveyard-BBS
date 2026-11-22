@@ -22,23 +22,23 @@ describe("BBS basics on a real server", () => {
     await server.close().catch(() => undefined);
   });
 
-  it("create_task: the sysop opens a thread on a brand-new board; a builder is refused; a duplicate is refused", async () => {
+  it("create_task: the sysop opens a thread on #websites; a builder is refused; a duplicate is refused", async () => {
     const sysop = await dial(server.url, sysopTok);
     const builder = await dial(server.url, builderTok);
     const a = await sysop.call("bbs_create_task", {
-      thread_id: "crypts-first",
+      thread_id: "websites-first",
       text: "First grave",
     });
     expect(a.isError).toBe(false);
-    expect(svc.p.tasks["crypts-first"]?.status).toBe("pending");
+    expect(svc.p.tasks["websites-first"]?.status).toBe("pending");
     const dup = await sysop.call("bbs_create_task", {
-      thread_id: "crypts-first",
+      thread_id: "websites-first",
       text: "Again",
     });
     expect(dup.isError).toBe(true);
     expect(dup.text).toContain("ILLEGAL_TRANSITION");
     const denied = await builder.call("bbs_create_task", {
-      thread_id: "crypts-second",
+      thread_id: "websites-second",
       text: "Nope",
     });
     expect(denied.isError).toBe(true);
@@ -50,34 +50,66 @@ describe("BBS basics on a real server", () => {
     expect(bad.isError).toBe(true);
   });
 
+  it("create_task on a board with no pipeline (#games) is refused NOT_FOUND and the hint names the five", async () => {
+    const sysop = await dial(server.url, sysopTok);
+    const r = await sysop.call("bbs_create_task", {
+      thread_id: "games-graveyard-invaders",
+      text: "Graveyard Invaders",
+    });
+    expect(r.isError).toBe(true);
+    expect(r.text).toContain("NOT_FOUND");
+    for (const b of ["arcade", "websites", "slides", "media", "bugfix"])
+      expect(r.text).toContain(`#${b}`);
+    expect(svc.p.tasks["games-graveyard-invaders"]).toBeUndefined();
+  });
+
+  it("a stage thread (parent set) is created whatever its id; the board check is for top-level tasks", async () => {
+    const sysop = await dial(server.url, sysopTok);
+    await sysop.call("bbs_create_task", {
+      thread_id: "websites-parent",
+      text: "Parent",
+    });
+    const r = await sysop.call("bbs_create_task", {
+      thread_id: "design-websites-parent",
+      text: "Design stage",
+      parent: "websites-parent",
+    });
+    expect(r.isError).toBe(false);
+    expect(svc.p.tasks["design-websites-parent"]?.parent).toBe(
+      "websites-parent",
+    );
+  });
+
   it("state machine: pending -> running is legal, running -> done is refused, even for the sysop", async () => {
     const sysop = await dial(server.url, sysopTok);
     const builder = await dial(server.url, builderTok);
     await sysop.call("bbs_create_task", {
-      thread_id: "crypts-sm",
+      thread_id: "websites-sm",
       text: "State machine",
       assigned: "builder-1",
     });
-    const pk = await builder.call("bbs_get_packet", { thread_id: "crypts-sm" });
+    const pk = await builder.call("bbs_get_packet", {
+      thread_id: "websites-sm",
+    });
     await builder.call("bbs_ack_packet", {
-      thread_id: "crypts-sm",
+      thread_id: "websites-sm",
       packet_id: String(pk.json["packet_id"]),
     });
     expect(
       (
         await builder.call("bbs_set_status", {
-          thread_id: "crypts-sm",
+          thread_id: "websites-sm",
           to: "running",
         })
       ).isError,
     ).toBe(false);
     const r = await builder.call("bbs_set_status", {
-      thread_id: "crypts-sm",
+      thread_id: "websites-sm",
       to: "done",
     });
     expect(r.isError).toBe(true);
     expect(r.text).toContain("ILLEGAL_TRANSITION");
-    expect(svc.p.tasks["crypts-sm"]?.status).toBe("running");
+    expect(svc.p.tasks["websites-sm"]?.status).toBe("running");
   });
 
   it("locks: a running owner claims; a second claimer queues and is blocked", async () => {
@@ -86,8 +118,8 @@ describe("BBS basics on a real server", () => {
     const tok2 = svc.store.addCaller("builder-2", "builder");
     const b2 = await dial(server.url, tok2);
     for (const [t, who, c] of [
-      ["crypts-l1", "builder-1", b1],
-      ["crypts-l2", "builder-2", b2],
+      ["websites-l1", "builder-1", b1],
+      ["websites-l2", "builder-2", b2],
     ] as const) {
       await sysop.call("bbs_create_task", {
         thread_id: t,
@@ -102,18 +134,18 @@ describe("BBS basics on a real server", () => {
       await c.call("bbs_set_status", { thread_id: t, to: "running" });
     }
     const first = await b1.call("bbs_claim_lock", {
-      thread_id: "crypts-l1",
+      thread_id: "websites-l1",
       lock: "package.json",
     });
     expect(first.isError).toBe(false);
     await b2.call("bbs_claim_lock", {
-      thread_id: "crypts-l2",
+      thread_id: "websites-l2",
       lock: "package.json",
     });
-    expect(svc.p.tasks["crypts-l2"]?.status).toBe("blocked");
+    expect(svc.p.tasks["websites-l2"]?.status).toBe("blocked");
   });
 
-  it("sysop [N] through Session: keys in, task visible out; works from login, any case, new board", async () => {
+  it("sysop [N] through Session: keys in, task visible out; works from login, any case, board picked by letter", async () => {
     const src = new LiveSource({ baseUrl: server.url, token: sysopTok });
     const out: string[] = [];
     const session = new Session({
@@ -122,20 +154,20 @@ describe("BBS basics on a real server", () => {
       reducedMotion: true,
     });
     src.start();
-    await until(() => src.state().p.tasks["crypts-first"] !== undefined);
+    await until(() => src.state().p.tasks["websites-first"] !== undefined);
     session.key("N"); // on the login splash
     expect(plain(out.at(-1) ?? "")).toContain(
       "New task · whisper it to the crypt",
     );
-    session.key("Vaults\rOpen the vault\rBring a torch\x13");
-    await until(() => svc.p.tasks["vaults-open-the-vault"] !== undefined);
-    expect(svc.p.tasks["vaults-open-the-vault"]?.status).toBe("pending");
+    session.key("w\rOpen the vault\rBring a torch\x13"); // W picks #websites
+    await until(() => svc.p.tasks["websites-open-the-vault"] !== undefined);
+    expect(svc.p.tasks["websites-open-the-vault"]?.status).toBe("pending");
     await until(
-      () => src.state().p.tasks["vaults-open-the-vault"] !== undefined,
+      () => src.state().p.tasks["websites-open-the-vault"] !== undefined,
     );
     session.key("\x1b"); // no-op on menu
-    session.key("b");
-    expect(plain(out.at(-1) ?? "")).toContain("vaults");
+    session.key("b\x1b[B\r"); // boards → #websites
+    expect(plain(out.at(-1) ?? "")).toContain("websites-open-the-vault");
     session.dispose();
     src.stop();
   });

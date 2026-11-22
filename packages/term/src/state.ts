@@ -165,15 +165,30 @@ export const isOpen = (t: Task): boolean =>
 /** Bookkeeping threads the moderator keeps for itself; never shown as work. */
 export const SYSTEM_THREADS = new Set(["mod-cursor"]);
 
+/**
+ * The boards that have agents (one steering file each in `.kiro/steering/boards/`; a test
+ * keeps them equal). The tree always shows all five, and new tasks can only go on one of them.
+ */
+export const BOARDS = [
+  "arcade",
+  "websites",
+  "slides",
+  "media",
+  "bugfix",
+] as const;
+const KNOWN = new Set<string>(BOARDS);
+
+/** Tasks the BBS shows: on a known board, not a system thread, not cancelled (kept in the log). */
 export const threadsOf = (s: State, board?: string): Task[] =>
   Object.values(s.p.tasks).filter(
     (t) =>
       !SYSTEM_THREADS.has(t.thread_id) &&
+      t.status !== "cancelled" &&
+      KNOWN.has(boardOf(t.thread_id)) &&
       (!board || boardOf(t.thread_id) === board),
   );
 
-export const boardNames = (s: State): string[] =>
-  [...new Set(threadsOf(s).map((t) => boardOf(t.thread_id)))].sort();
+export const boardNames = (): string[] => [...BOARDS];
 
 /** Stage and split threads the moderator opened under a task, oldest first. */
 export const childrenOf = (s: State, parent: string): Task[] =>

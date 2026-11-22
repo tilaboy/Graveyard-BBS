@@ -111,9 +111,12 @@ describe("login board summary", () => {
     expect(plain(rows[0]!)).not.toContain("pending");
     expect(plain(rows[0]!)).toContain("🌙");
   });
-  it("says the crypt is empty when there are no tasks", () => {
-    expect(boardSummary(emptyState(), viewOf()).map(plain)).toEqual([
+  it("lists all five boards at 0 and says the crypt is empty when there are no tasks", () => {
+    const rows = boardSummary(emptyState(), viewOf()).map(plain);
+    for (const b of ["arcade", "websites", "slides", "media", "bugfix"])
+      expect(rows.some((r) => r.startsWith(`  #${b} `))).toBe(true);
+    expect(rows.at(-1)).toBe(
       "  💤 The crypt is empty. Press N to post a task.",
-    ]);
+    );
   });
 });

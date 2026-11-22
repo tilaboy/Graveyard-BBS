@@ -19,7 +19,13 @@ import {
 } from "./screens.js";
 import { pathsIn } from "./format.js";
 import type { Action, Source } from "./source.js";
-import { boardNames, newView, openAsks, type View } from "./state.js";
+import {
+  boardNames,
+  newView,
+  openAsks,
+  threadsOf,
+  type View,
+} from "./state.js";
 import { BELL_REPEAT_MS, LOGIN_AUTO_MS, type SoundName } from "./theme.js";
 
 /** How long a one-line notice stays before it clears itself. */
@@ -252,7 +258,7 @@ export class Session {
     const v = this.view;
     switch (v.screen) {
       case "boards":
-        return boardsList(s).length;
+        return boardsList().length;
       case "threads":
         return threadList(s, v).length;
       case "sysop":
@@ -359,7 +365,7 @@ export class Session {
       }
       case "boards":
         if (k === "enter") {
-          const b = boardsList(s)[v.sel];
+          const b = boardsList()[v.sel];
           if (b) this.go("threads", { board: b });
         }
         return;
@@ -472,6 +478,15 @@ export class Session {
         Math.min(rows.length - 1, i + (k === "up" ? -1 : 1)),
       );
       at(rows[j]?.key ?? r.key);
+    } else if (
+      (k === "right" || k === "enter") &&
+      r.kind === "board" &&
+      threadsOf(this.o.source.state(), r.board).length === 0
+    ) {
+      // An empty board has nothing to open; say how to fill it.
+      open[r.key] = true;
+      at(r.key);
+      v.flash = "No tasks yet. Press N.";
     } else if (k === "right") {
       if (r.kind === "board" || r.kind === "task" || r.hidden)
         open[r.key] = true;
@@ -675,7 +690,7 @@ export class Session {
       v.screen === "tree"
         ? treeRows(s, v)[treeCursor(treeRows(s, v), v)]?.board
         : v.board;
-    const board = here ?? boardNames(s)[0] ?? "general";
+    const board = here && boardNames().includes(here) ? here : boardNames()[0]!;
     v.form = {
       field: "board",
       board,
@@ -717,23 +732,18 @@ export class Session {
     if (f.error?.field === f.field) delete f.error;
     switch (f.field) {
       case "board": {
-        const list = boardNames(this.o.source.state());
+        // A picker over the five boards: arrows move, a typed letter jumps to the board it starts.
+        const list = boardNames();
+        const i = Math.max(0, list.indexOf(f.board));
         if (k === "enter") step(1);
-        else if ((k === "up" || k === "down") && list.length > 0) {
-          const i = list.indexOf(f.board);
-          const j =
-            i < 0 ? 0 : (i + (k === "up" ? -1 : 1) + list.length) % list.length;
-          Object.assign(f, { board: list[j], fresh: true });
-        } else if (k === "backspace")
-          Object.assign(f, {
-            board: f.fresh ? "" : drop(f.board),
-            fresh: false,
-          });
-        else if (ch)
-          Object.assign(f, {
-            board: (f.fresh ? "" : f.board) + ch,
-            fresh: false,
-          });
+        else if (k === "up" || k === "down")
+          f.board =
+            list[(i + (k === "up" ? -1 : 1) + list.length) % list.length]!;
+        else if (ch) {
+          const hit = list.find((b) => b.startsWith(ch.toLowerCase()));
+          if (hit) f.board = hit;
+        }
+        f.fresh = true;
         return;
       }
       case "title":
@@ -764,10 +774,12 @@ export class Session {
     if (!f) return;
     const board = f.board.trim().toLowerCase();
     const title = f.title.trim();
-    if (!/^[a-z0-9]+$/.test(board)) {
+    if (!boardNames().includes(board)) {
       f.error = {
         field: "board",
-        text: "Board names are letters and digits only.",
+        text: `Pick one of: ${boardNames()
+          .map((b) => `#${b}`)
+          .join(", ")}.`,
       };
       f.field = "board";
       return;

@@ -76,6 +76,25 @@ export function cancel(
   return r.ok ? ok({ status: "cancelled" }) : r;
 }
 
+/** `graveyard task cancel`: cancels a task and its stage threads. One result per thread, task first. */
+export function cancelTree(
+  svc: Service,
+  actor: Actor,
+  thread_id: string,
+  reason: string,
+): { thread: string; r: Result<unknown> }[] {
+  const ids = [
+    thread_id,
+    ...Object.values(svc.p.tasks)
+      .filter((t) => t.parent === thread_id)
+      .map((t) => t.thread_id),
+  ];
+  return ids.map((t) => ({
+    thread: t,
+    r: cancel(svc, actor, { thread_id: t, reason }),
+  }));
+}
+
 /** Task 18 / spec 00 R3.3: asks for `done` through the normal rules. It is refused for every caller, the Sysop included. */
 export function forceDone(
   svc: Service,

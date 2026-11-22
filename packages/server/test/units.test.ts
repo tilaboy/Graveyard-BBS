@@ -235,6 +235,35 @@ describe("hook guards (R5.1)", () => {
 });
 
 describe("sysop endpoints (R6.2) and leases", () => {
+  it("task cancel (cancelTree) cancels a task and its stage threads, and leaves others alone", () => {
+    const svc = makeEnv().open();
+    for (const [id, parent] of [
+      ["games-invaders", undefined],
+      ["design-games-invaders", "games-invaders"],
+      ["build-games-invaders", "games-invaders"],
+      ["websites-keep", undefined],
+    ] as const)
+      svc.exec({
+        type: "create_task",
+        actor: sysop,
+        thread_id: id,
+        text: id,
+        ...(parent ? { parent } : {}),
+      });
+    const out = sysopApi.cancelTree(svc, sysop, "games-invaders", "cleared");
+    expect(out.map((o) => [o.thread, o.r.ok])).toEqual([
+      ["games-invaders", true],
+      ["design-games-invaders", true],
+      ["build-games-invaders", true],
+    ]);
+    for (const id of [
+      "games-invaders",
+      "design-games-invaders",
+      "build-games-invaders",
+    ])
+      expect(svc.p.tasks[id]!.status).toBe("cancelled");
+    expect(svc.p.tasks["websites-keep"]!.status).toBe("pending");
+  });
   it("cancel needs a reason; steer sets next; reorder needs the exact queue and a why", () => {
     const svc = makeEnv().open();
     running(svc, "websites-1", b1);
