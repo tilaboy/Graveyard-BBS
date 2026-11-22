@@ -68,13 +68,26 @@ describe("R1/R8 routing and parallel start", () => {
     expect(spawns(actions)[0]?.thread).toBe("arcade-bat-build");
   });
 
-  it("ignores boards without a pipeline and its own events", () => {
+  it("ignores its own events; a board with no pipeline gets one ??? instead of silence", () => {
     const log = new Log()
       .task("mod-cursor", "x", "moderator")
       .task("unknown-thing", "x");
-    expect(plan(initialState(), log.events, O).actions).toEqual([
+    const first = plan(initialState(), log.events, O);
+    expect(first.actions).toEqual([
+      {
+        type: "escalate",
+        thread: "unknown-thing",
+        text: expect.stringMatching(/No agent works the #unknown board/),
+      },
       { type: "cursor", seq: 2, exists: true },
     ]);
+    // Asked once: a later wake does not ask again.
+    log.task("websites-x", "y");
+    expect(
+      plan(first.state, log.events, O).actions.filter(
+        (a) => a.type === "escalate",
+      ),
+    ).toEqual([]);
   });
 
   it("server replies on the cursor thread do not wake a new cursor write", () => {

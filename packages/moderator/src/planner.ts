@@ -347,6 +347,23 @@ export function plan(
         text: `Routed to #${boardOf(t)}, starting at ${first?.name ?? "nowhere"} (${first?.role ?? "-"}). why: ${vibe ? "vibe mode skips design" : "first stage of the board pipeline"}.`,
       });
       startStage(t, 0);
+    } else if (
+      e.type === "TASK" &&
+      !e.body.parent &&
+      !s.roots[t] &&
+      t !== "mod-cursor" &&
+      !o.pipelines[boardOf(t)]
+    ) {
+      // No pipeline for this board: say so once, instead of leaving the task pending in silence.
+      s.roots[t] = { work: [], waiting: [] };
+      const known = Object.keys(o.pipelines)
+        .sort()
+        .map((b) => `#${b}`);
+      actions.push({
+        type: "escalate",
+        thread: t,
+        text: `??? No agent works the #${boardOf(t)} board. Boards with agents: ${known.join(", ")}. Post this task again on one of them.`,
+      });
     } else if (e.type === "STATUS" && rec) {
       if (e.body.to === "awaiting-review")
         spawn(t, "reviewer", `reviewer-${t}`, false);
