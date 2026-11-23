@@ -52,8 +52,14 @@ export const publish = defineDoor({
     writeFileSync(join(root, "index.json"), JSON.stringify(list, null, 2));
     return {
       exitCode: 0,
-      log: `published ${args.kind} ${args.slug}\n`,
-      extra: { kind: args.kind, slug: args.slug, path: to },
+      log: `published ${args.kind} ${args.slug} at /published/${SOURCE[args.kind]}/${args.slug}/\n`,
+      extra: {
+        kind: args.kind,
+        slug: args.slug,
+        path: to,
+        // Served by the BBS itself (api.ts /published/*), same host as the terminal.
+        url: `/published/${SOURCE[args.kind]}/${args.slug}/`,
+      },
     };
   },
 });
