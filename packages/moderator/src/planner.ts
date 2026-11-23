@@ -26,7 +26,8 @@ export type Action =
       /** The stage writes a Kiro spec (design): the agent gets the spec_check steps. */
       spec?: boolean;
     }
-  | { type: "steer"; thread: string; message: string }
+  /** `handle`: the running stage's owner, whose agent id the runner looks up. */
+  | { type: "steer"; thread: string; handle: string; message: string }
   | { type: "check_gate"; thread: string }
   | { type: "escalate"; thread: string; text: string }
   | { type: "store_lesson"; lesson: HubLesson }
@@ -99,6 +100,7 @@ export interface Opts {
 }
 
 const WORK_ROLES = ["designer", "builder", "release", "artist"];
+/** Crash respawns (lease-expired) only; stage, reviewer and resume spawns do not count. */
 const MAX_RESPAWNS = 2;
 const MAX_LESSONS = 5;
 // shortcut: a keyword test, not understanding. Upgrade when real Sysop phrasing slips past it.
@@ -431,6 +433,7 @@ export function plan(
       actions.push({
         type: "steer",
         thread: t,
+        handle: rec.handle,
         message: steerMessage(e.body.text),
       });
     }

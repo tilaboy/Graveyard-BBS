@@ -20,8 +20,8 @@ export function agentName(role: string): string {
 export interface Runner {
   /** Returns an agent id. */
   spawn(r: SpawnReq): Promise<string>;
-  /** False when the agent cannot be reached (the caller notes it in the thread). */
-  steer(thread: string, message: string): Promise<boolean>;
+  /** Steer the agent of `handle`. False when it cannot be reached (the caller notes it in the thread). */
+  steer(handle: string, message: string): Promise<boolean>;
   /** Mirror a lesson into the runner's own memory (Kiro Crew `learn_add`). */
   learn(l: HubLesson): Promise<void>;
 }
@@ -69,6 +69,9 @@ export class KiroCliRunner implements Runner {
 export interface CrewCall {
   tool: "spawn_run" | "spawn_steer" | "learn_add";
   args: Record<string, unknown>;
+  /** spawn_run only: pass these to `moderator agent <thread> <agent-id> --handle <handle>`. */
+  thread?: string;
+  handle?: string;
 }
 
 /**
@@ -76,14 +79,15 @@ export interface CrewCall {
  * `spawn_steer` and `learn_add` are MCP tools of the Crew session. So this runner does not start
  * anything itself. It turns each action into the exact tool call and queues it in `calls`; the
  * moderator agent (a Crew session) drains the queue and makes the calls. Agent ids come back
- * from `spawn_run`; `recordAgent` stores them so a later steer can name the agent.
+ * from `spawn_run`; `recordAgent` stores them by handle (a reviewer and a designer share a thread)
+ * so a later steer can name the agent.
  */
 export class KiroCrewRunner implements Runner {
   readonly calls: CrewCall[] = [];
   constructor(private readonly agents: Record<string, string> = {}) {}
 
-  recordAgent(thread: string, id: string): void {
-    this.agents[thread] = id;
+  recordAgent(handle: string, id: string): void {
+    this.agents[handle] = id;
   }
 
   // shortcut: Crew spawn_run has no env parameter, so GRAVEYARD_TOKEN travels inside the task text.
@@ -96,15 +100,17 @@ export class KiroCrewRunner implements Runner {
         include_lessons: true,
         ...(r.cwd ? { cwd: r.cwd } : {}),
       },
+      thread: r.thread,
+      handle: r.handle,
     });
-    return Promise.resolve(`pending:${r.thread}`);
+    return Promise.resolve(`pending:${r.handle}`);
   }
-  steer(thread: string, message: string): Promise<boolean> {
+  steer(handle: string, message: string): Promise<boolean> {
     this.calls.push({
       tool: "spawn_steer",
       args: {
         agent_id:
-          this.agents[thread] ?? `<agent id of ${thread} from spawn_list>`,
+          this.agents[handle] ?? `<agent id of ${handle} from spawn_list>`,
         message,
         mode: "interrupt",
       },

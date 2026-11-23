@@ -225,6 +225,19 @@ describe("R4 recovery", () => {
     expect(spawns(r.actions)[0]).toMatchObject({ resume: true });
     expect(r.state.respawns["slides-pitch-outline"]).toBe(0);
   });
+  it("only crash respawns count: stage, reviewer and resume spawns never hit the limit", () => {
+    const t = "slides-pitch-outline";
+    const log = base()
+      .status(t, "running", "awaiting-review")
+      .post("ANSWER", t, "sysop", "go on")
+      .status(t, "running", "awaiting-review")
+      .post("ANSWER", t, "sysop", "go on")
+      .expired(t);
+    const r = plan(initialState(), log.events, O);
+    expect(r.state.agents[t]).toBe(6);
+    expect(of(r.actions, "escalate")).toEqual([]);
+    expect(spawns(r.actions).at(-1)).toMatchObject({ resume: true });
+  });
 });
 
 describe("R5.2 and R8 blocking", () => {

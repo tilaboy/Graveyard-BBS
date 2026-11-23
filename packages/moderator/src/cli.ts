@@ -3,25 +3,28 @@ import { dirname, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { EventSchema, fold } from "@graveyard/core";
 import { z } from "zod";
-import { execute, step, type Bbs } from "./execute.js";
+import { step, type Bbs, type SpawnAction } from "./execute.js";
 import { loadPipelines } from "./pipeline.js";
-import {
-  isSpecStage,
-  recover,
-  seedHub,
-  selectLessons,
-  storedCursor,
-  type State,
-} from "./planner.js";
+import { recover, seedHub, storedCursor, type State } from "./planner.js";
 import { KiroCliRunner, KiroCrewRunner } from "./runner.js";
+import {
+  migrateAgents,
+  ownerOf,
+  resend,
+  respawnTarget,
+  ROLES,
+  track,
+  type Pending,
+} from "./spawns.js";
 import { tasksMdOf, worktreeOf } from "./worktree.js";
 
 const USAGE = `graveyard-moderator step [--runner crew|cli] [--boards DIR] [--data-dir DIR] [--project NAME]
-graveyard-moderator agent <thread> <agent-id>     remember a Kiro Crew agent id (for steering)
-graveyard-moderator respawn <thread>              queue a resume spawn for a stage with no live agent (rotates the child token)
+graveyard-moderator agent <thread> <agent-id> [--handle H]   confirm a spawn: remember its Kiro Crew agent id
+graveyard-moderator respawn <thread> [--role ROLE]           queue a spawn (default role: the one the thread waits on)
 
 Env: GRAVEYARD_URL (default http://127.0.0.1:2626), GRAVEYARD_TOKEN (the moderator's token).
-"step" prints JSON: crew_calls (Kiro Crew tool calls YOU must make), errors, actions.`;
+"step" prints JSON: crew_calls (Kiro Crew tool calls YOU must make), errors, actions.
+A spawn_run stays pending, and is sent again each step with a fresh token, until "agent" confirms it.`;
 
 function http(url: string, token: string): Bbs {
   const h = {
@@ -60,32 +63,57 @@ async function main(argv: string[]) {
       boards: { type: "string", default: ".kiro/steering/boards" },
       "data-dir": { type: "string", default: ".graveyard" },
       project: { type: "string", default: "graveyard-bbs" },
+      handle: { type: "string" },
+      role: { type: "string" },
     },
   });
   const dataDir = resolve(values["data-dir"]);
   const agentsFile = join(dataDir, "moderator-agents.json");
   const stateFile = join(dataDir, "moderator-state.json");
-  const respawnFile = join(dataDir, "moderator-respawn.json");
+  const pendingFile = join(dataDir, "moderator-pending.json");
   const [cmd, thread, id] = positionals;
+  const saved = readJson<State | undefined>(stateFile, undefined);
+  const agents = migrateAgents(readJson(agentsFile, {}), saved?.stages ?? {});
+  const pending = readJson<Pending>(pendingFile, {});
+  const connect = () => {
+    const token = process.env["GRAVEYARD_TOKEN"];
+    if (!token) throw new Error("GRAVEYARD_TOKEN is not set");
+    const url = process.env["GRAVEYARD_URL"] ?? "http://127.0.0.1:2626";
+    return { url, bbs: http(url, token) };
+  };
 
   if (cmd === "agent" && thread && id) {
-    writeJson(agentsFile, { ...readJson(agentsFile, {}), [thread]: id });
+    const handle =
+      values.handle ?? ownerOf(thread, pending, saved?.stages ?? {});
+    agents[handle] = id;
+    delete pending[handle];
+    writeJson(agentsFile, agents);
+    writeJson(pendingFile, pending);
+    console.log(`${handle} = ${id}`);
     return;
   }
   if (cmd === "respawn" && thread) {
-    // A spawn that never became a live agent. A shell cannot call spawn_run, so this only
-    // QUEUES it; the next scheduled `step` (a Crew session) makes the call.
-    const state = readJson<State | undefined>(stateFile, undefined);
-    if (!state?.stages[thread])
-      throw new Error(`no stage '${thread}' in ${stateFile}`);
-    const q = new Set(readJson<string[]>(respawnFile, []));
-    q.add(thread);
-    writeJson(respawnFile, [...q]);
-    const agents = readJson<Record<string, string>>(agentsFile, {});
-    delete agents[thread];
+    // A shell cannot call spawn_run, so this only QUEUES it; the next scheduled `step`
+    // (a Crew session) sends it with a fresh token.
+    const rec = saved?.stages[thread];
+    if (!rec) throw new Error(`no stage '${thread}' in ${stateFile}`);
+    if (values.role && !(ROLES as readonly string[]).includes(values.role))
+      throw new Error(`--role must be one of ${ROLES.join(", ")}`);
+    const status = fold(await connect().bbs.events()).tasks[thread]?.status;
+    const t = respawnTarget(thread, rec, status, values.role);
+    pending[t.handle] = {
+      thread,
+      ...t,
+      resume: true,
+      packet: "",
+      at: Date.now(),
+      sent: 0,
+    };
+    delete agents[t.handle];
+    writeJson(pendingFile, pending);
     writeJson(agentsFile, agents);
     console.log(
-      `queued ${thread}; the next moderator-step spawns it with a fresh token.`,
+      `queued ${t.handle} (${t.role}) on ${thread}; the next moderator-step spawns it with a fresh token.`,
     );
     return;
   }
@@ -94,24 +122,19 @@ async function main(argv: string[]) {
     process.exitCode = cmd ? 1 : 0;
     return;
   }
-  const url = process.env["GRAVEYARD_URL"] ?? "http://127.0.0.1:2626";
-  const token = process.env["GRAVEYARD_TOKEN"];
-  if (!token) throw new Error("GRAVEYARD_TOKEN is not set");
-  const bbs = http(url, token);
+  const { url, bbs } = connect();
   const opts = {
     pipelines: loadPipelines(resolve(values.boards)),
     project: values.project,
   };
   // R7.1: resume from the state file, or rebuild it from the log up to the cursor note.
   const log = await bbs.events();
-  let state: State =
-    readJson<State | undefined>(stateFile, undefined) ??
-    recover(log, storedCursor(log), opts);
+  let state: State = saved ?? recover(log, storedCursor(log), opts);
   const hub = await bbs.call("bbs_list_lessons", {});
   if (hub.ok)
     state = seedHub(state, hub.value as Parameters<typeof seedHub>[1]);
 
-  const crew = new KiroCrewRunner(readJson(agentsFile, {}));
+  const crew = new KiroCrewRunner(agents);
   const runner = values.runner === "cli" ? new KiroCliRunner() : crew;
   const io = {
     bbs,
@@ -121,36 +144,15 @@ async function main(argv: string[]) {
     cwdOf: async (t: string) =>
       worktreeOf(dataDir, process.cwd(), fold(await bbs.events()).tasks, t),
     tasksMdOf: (root: string) => tasksMdOf(dataDir, root),
+    spawned: (a: SpawnAction, packet: string) =>
+      track(pending, a, packet, Date.now()),
   };
-  // Queued respawns (`moderator respawn <thread>`): stages whose earlier spawn never ran.
-  const queued = readJson<string[]>(respawnFile, []);
-  const errors: string[] = [];
-  if (queued.length) {
-    const p = fold(log);
-    const actions = queued.flatMap((t) => {
-      const rec = state.stages[t];
-      const st = p.tasks[t]?.status;
-      if (!rec || !st || st === "done" || st === "cancelled") return [];
-      const goal = `${p.tasks[rec.root]?.text ?? ""} ${p.tasks[t]?.text ?? ""}`;
-      return [
-        {
-          type: "spawn" as const,
-          thread: t,
-          handle: rec.handle,
-          role: rec.role,
-          resume: true,
-          lessons: selectLessons(state.lessons, goal, t.split("-")[0] ?? "", t),
-          // A design stage resumed after the Sysop's approve gets the spec_check steps.
-          ...(isSpecStage(opts.pipelines, rec, t) ? { spec: true } : {}),
-        },
-      ];
-    });
-    const done = await execute(actions, io, values.project);
-    errors.push(...done.errors);
-    writeJson(respawnFile, []);
-  }
+  // Spawns sent before and never confirmed, plus `respawn` requests. The cli runner starts its
+  // process itself, so its spawns need no confirmation: the ledger is cleared after the step.
+  const errors = await resend(pending, state, log, io, opts);
   const r = await step(state, io, opts);
   writeJson(stateFile, r.state);
+  writeJson(pendingFile, runner === crew ? pending : {});
   console.log(
     JSON.stringify(
       {

@@ -16,9 +16,26 @@ import { createDemoRepo } from "../../server/src/seed.js";
 import { Store } from "../../server/src/store.js";
 import { answer } from "../../server/src/sysop.js";
 import { buildTools, callTool, type ToolCtx } from "../../server/src/tools.js";
-import { step, type Bbs, type Io } from "../src/execute.js";
-import { initialState, seedHub } from "../src/planner.js";
+import {
+  fitPacket,
+  SPAWN_TASK_MAX,
+  step,
+  TRIMMED,
+  type Bbs,
+  type Io,
+} from "../src/execute.js";
+import { initialState, seedHub, type State } from "../src/planner.js";
 import { agentName, KiroCliRunner, KiroCrewRunner } from "../src/runner.js";
+import {
+  MAX_REEMITS,
+  RESEND_AFTER_MS,
+  migrateAgents,
+  ownerOf,
+  resend,
+  respawnTarget,
+  track,
+  type Pending,
+} from "../src/spawns.js";
 import { tasksMdOf, worktreeOf } from "../src/worktree.js";
 import { BOARDS, opts } from "./log.js";
 
@@ -131,7 +148,9 @@ describe("executor against the real server", () => {
     await designer("bbs_set_status", { thread_id: t, to: "running" });
     expect(w.svc.p.tasks[t]!.status).toBe("running");
 
-    w.runner.recordAgent(t, "agent-42");
+    // Keyed by handle: a reviewer id on the same thread must not shadow the owner's.
+    w.runner.recordAgent(`designer-${t}`, "agent-42");
+    w.runner.recordAgent(`reviewer-${t}`, "agent-99");
     await w.as("sysop", "sysop")("bbs_post", {
       thread_id: t,
       kind: "NOTE",
@@ -280,6 +299,185 @@ describe("executor against the real server", () => {
         applies: "on_topic",
       },
     });
+  });
+});
+
+describe("pending spawns survive a skipped or refused spawn_run", () => {
+  const T = "slides-deck-outline";
+  const H = `designer-${T}`;
+  async function setup() {
+    const w = world();
+    const pending: Pending = {};
+    w.io.spawned = (a, packet) => track(pending, a, packet, w.io.now());
+    await w.as("sysop", "sysop")("bbs_create_task", {
+      thread_id: "slides-deck",
+      text: "Deck",
+    });
+    const o = opts();
+    const s: State = (await step(initialState(), w.io, o)).state;
+    const runs = () => w.runner.calls.filter((c) => c.tool === "spawn_run");
+    // Each re-send is checked after the wait, as a later step would be.
+    let clock = Date.UTC(2026, 9, 31, 23, 0, 0);
+    w.io.now = () => clock;
+    const again = async () => {
+      clock += RESEND_AFTER_MS;
+      return resend(pending, s, await w.bbs.events(), w.io, o);
+    };
+    const soon = async () => {
+      clock += 60_000;
+      return resend(pending, s, await w.bbs.events(), w.io, o);
+    };
+    return { w, pending, s, runs, again, soon };
+  }
+  const tokenOf = (task: unknown) =>
+    /GRAVEYARD_TOKEN=(gy_[0-9a-f]+)/.exec(String(task))![1]!;
+
+  it("a send younger than RESEND_AFTER_MS is not repeated (the agent may still be starting)", async () => {
+    const { runs, soon } = await setup();
+    await soon();
+    expect(runs()).toHaveLength(1);
+  });
+
+  it("a spawn whose id is never recorded is sent again next step, with a fresh token", async () => {
+    const { w, pending, runs, again } = await setup();
+    expect(pending[H]).toMatchObject({ thread: T, sent: 1 });
+    const first = runs().at(-1)!;
+    // The handle and thread travel beside the call, for `moderator agent ... --handle`.
+    expect(first).toMatchObject({ thread: T, handle: H });
+    expect(await again()).toEqual([]);
+    expect(runs()).toHaveLength(2);
+    const second = runs().at(-1)!;
+    expect(tokenOf(second.args["task"])).not.toBe(tokenOf(first.args["task"]));
+    expect(w.svc.store.callerBySecret(tokenOf(first.args["task"]))).toBeFalsy();
+    expect(pending[H]?.sent).toBe(2);
+  });
+
+  it("after `agent` confirms it (or the agent ACKs its packet) it is not sent again", async () => {
+    const a = await setup();
+    delete a.pending[ownerOf(T, a.pending, a.s.stages)];
+    await a.again();
+    expect(a.runs()).toHaveLength(1);
+
+    const b = await setup();
+    await b.w.as(H, "designer")("bbs_ack_packet", {
+      thread_id: T,
+      packet_id: b.pending[H]!.packet,
+    });
+    await b.again();
+    expect(b.runs()).toHaveLength(1);
+    expect(b.pending).toEqual({});
+  });
+
+  it(`${MAX_REEMITS} re-emits, then one ??? to the Sysop`, async () => {
+    const { w, pending, runs, again } = await setup();
+    for (let i = 0; i < MAX_REEMITS + 3; i++) await again();
+    expect(runs()).toHaveLength(1 + MAX_REEMITS);
+    const asks = w.svc.p.tasks[T]!.posts.filter(
+      (p) => p.type === "ASK" && p.text.includes(`${H} never started`),
+    );
+    expect(asks).toHaveLength(1);
+    expect(asks[0]?.text).toMatch(/spawn limits/);
+    expect(pending).toEqual({});
+  });
+
+  it("respawn --role reviewer on an awaiting-review thread sends a graveyard-reviewer spawn_run", async () => {
+    const { pending, s, runs, again } = await setup();
+    const rec = s.stages[T]!;
+    expect(respawnTarget(T, rec, "running")).toEqual({
+      role: "designer",
+      handle: H,
+    });
+    const t = respawnTarget(T, rec, "awaiting-review");
+    expect(t).toEqual(respawnTarget(T, rec, "pending", "reviewer"));
+    delete pending[H];
+    pending[t.handle] = {
+      thread: T,
+      ...t,
+      resume: true,
+      packet: "",
+      at: 0,
+      sent: 0,
+    };
+    await again();
+    expect(runs().at(-1)).toMatchObject({
+      handle: `reviewer-${T}`,
+      args: { agent: "graveyard-reviewer" },
+    });
+  });
+
+  it("ids are keyed by handle: an old thread-keyed file migrates, two pending spawns need --handle", () => {
+    const stages = {
+      [T]: {
+        root: "slides-deck",
+        idx: 0,
+        stage: "outline",
+        role: "designer",
+        handle: H,
+      },
+    };
+    expect(
+      migrateAgents({ [T]: "126253", [`reviewer-${T}`]: "r1" }, stages),
+    ).toEqual({ [H]: "126253", [`reviewer-${T}`]: "r1" });
+    const p = (handle: string) => ({
+      thread: T,
+      handle,
+      role: "x",
+      resume: false,
+      packet: "",
+      at: 0,
+      sent: 1,
+    });
+    expect(ownerOf(T, {}, stages)).toBe(H);
+    expect(ownerOf(T, { r: p(`reviewer-${T}`) }, stages)).toBe(`reviewer-${T}`);
+    expect(() =>
+      ownerOf(T, { a: p(H), b: p(`reviewer-${T}`) }, stages),
+    ).toThrow(/--handle/);
+  });
+
+  it(`a packet too big for spawn_run is trimmed to ${SPAWN_TASK_MAX}, keeping token, packet id and goal`, async () => {
+    const { w, pending, runs, again } = await setup();
+    for (let i = 0; i < 10; i++)
+      await w.as("sysop", "sysop")("bbs_post", {
+        thread_id: T,
+        kind: "NOTE",
+        text: `note ${i} ${"boo ".repeat(150)}`,
+      });
+    const full = await w.mod("bbs_get_packet", { thread_id: T });
+    expect(
+      String((full as { value: { text: string } }).value.text).length,
+    ).toBeGreaterThan(SPAWN_TASK_MAX);
+    await again();
+    const task = String(runs().at(-1)!.args["task"]);
+    expect(task.length).toBeLessThanOrEqual(SPAWN_TASK_MAX);
+    const token = tokenOf(task);
+    expect(w.svc.store.callerBySecret(token)).toEqual({
+      handle: H,
+      role: "designer",
+    });
+    expect(task).toContain(`"authorization: Bearer ${token}"`);
+    expect(task).toContain(`packet_id ${pending[H]!.packet}`);
+    expect(task).toContain("## goal\nDeck");
+    expect(task).toContain(`## summary\n`);
+    expect(task).toContain(TRIMMED);
+  });
+
+  it("fitPacket trims summary, then tried, then lessons, and keeps goal and next whole", () => {
+    const text = [
+      "## goal\nDeck\nstage: outline",
+      `## summary\n${Array.from({ length: 20 }, (_, i) => `> #${i} ${"x".repeat(50)}`).join("\n")}`,
+      "## tried\n- [a] one — no",
+      "## lessons\n- l1\n- l2",
+      "## next\nwrite it",
+    ].join("\n\n");
+    const out = fitPacket(text, 400);
+    expect(out.length).toBeLessThanOrEqual(400);
+    expect(out).toContain("## goal\nDeck\nstage: outline");
+    expect(out).toContain("## next\nwrite it");
+    expect(out).toContain(`> #19 `);
+    expect(out).not.toContain("> #0 ");
+    expect(out).toContain("## tried\n- [a] one — no");
+    expect(out.split(TRIMMED)).toHaveLength(2);
+    expect(fitPacket(text, 10_000)).toBe(text);
   });
 });
 
