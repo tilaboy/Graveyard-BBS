@@ -1,0 +1,69 @@
+:root {
+  --black: #000000;
+  --bone: #aaaaaa;
+  --ghost: #ffffff;
+  --pumpkin: #ff8700;
+  --blood: #aa0000;
+  --poison: #55ff55;
+  --purple: #aa00aa;
+  --candle: #ffff55;
+  --cyan: #55ffff;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--black);
+  color: var(--ghost);
+  font-family: 'Courier New', monospace;
+}
+
+#game {
+  position: relative;
+  width: 480px;
+  margin: 0 auto;
+  padding-top: 16px;
+}
+
+#screen {
+  display: block;
+  width: 480px;
+  height: 640px;
+  background: var(--black);
+  border: 1px solid var(--bone);
+}
+
+#hud {
+  position: absolute;
+  top: 24px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  pointer-events: none;
+}
+
+#hud p {
+  margin: 4px 0;
+}
+
+#hud-score {
+  color: var(--candle);
+}
+
+#phase-btn {
+  pointer-events: auto;
+  margin-top: 8px;
+  padding: 6px 14px;
+  background: var(--black);
+  color: var(--cyan);
+  border: 1px solid var(--cyan);
+  font: inherit;
+  cursor: pointer;
+}
+
+#phase-btn:disabled {
+  color: var(--bone);
+  border-color: var(--bone);
+  cursor: default;
+}
