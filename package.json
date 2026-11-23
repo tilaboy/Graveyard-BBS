@@ -10,6 +10,7 @@
     "node": ">=22"
   },
   "scripts": {
+    "test": "npm test --workspaces --if-present",
     "lint": "eslint packages && prettier --check packages",
     "sounds": "tsx scripts/sounds.ts",
     "sync-power": "tsx packages/server/src/sync-power.ts",
