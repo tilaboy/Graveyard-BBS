@@ -15,6 +15,7 @@ import {
   wrap,
   ESC,
 } from "./ansi.js";
+import { AUTO_BOARD, formGuess } from "./route.js";
 import {
   boardNames,
   childrenOf,
@@ -1038,15 +1039,26 @@ function formBox(s: State, f: NewTaskForm, v: View, room: number): string[] {
       ? [sgr(COLOR.error, `       ${EMOJI.refusal} ${f.error.text}`)]
       : [];
   const boards = boardNames();
+  const pickOne = (b: string, shown: string) =>
+    b === f.board
+      ? sgr(`${COLOR.sysop};${COLOR.bold}`, shown)
+      : sgr(COLOR.dim, shown);
   const pick = [
-    `       ${sgr(COLOR.dim, "↑↓ or a letter")} ${boards
-      .map((b) =>
-        b === f.board
-          ? sgr(`${COLOR.sysop};${COLOR.bold}`, `#${b}`)
-          : sgr(COLOR.dim, `#${b}`),
-      )
-      .join(" ")}`,
+    `       ${sgr(COLOR.dim, "↑↓ or a letter")} ${[
+      pickOne(AUTO_BOARD, AUTO_BOARD),
+      ...boards.map((b) => pickOne(b, `#${b}`)),
+    ].join(" ")}`,
   ];
+  // Issue #2: on auto the Board field previews the board the words choose, and why.
+  const guess = f.board === AUTO_BOARD ? formGuess(f) : undefined;
+  const boardText =
+    f.board !== AUTO_BOARD
+      ? f.board
+      : guess
+        ? `${AUTO_BOARD} → #${guess.board} (${guess.why.slice(0, 3).join(", ")})`
+        : `${AUTO_BOARD} → ${
+            (f.title + f.body).trim() ? "no board fits yet" : "type a title"
+          }`;
   const fixed = 9 + pick.length + err("board").length + err("title").length;
   const rows = Math.max(3, Math.min(FORM_BODY_ROWS, room - fixed));
   const wrapped = wrap(f.body + (on("body") ? "█" : ""), cw - 2);
@@ -1071,7 +1083,7 @@ function formBox(s: State, f: NewTaskForm, v: View, room: number): string[] {
     : `${" ".repeat(Math.max(0, cw - 24))}${submit}  ${sgr(COLOR.dim, "Esc cancel")}`;
   const lines = [
     "",
-    `${label("board", "Board")}${input("board", f.board, f.fresh)}`,
+    `${label("board", "Board")}${input("board", boardText, f.fresh)}`,
     ...pick,
     ...err("board"),
     `${label("title", "Title")}${input("title", f.title)}`,

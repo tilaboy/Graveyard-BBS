@@ -314,7 +314,9 @@ describe("new task: Board auto picks the board from the words", () => {
       "xn\tAddress Git Repo Issue 2\thttps://github.com/tilaboy/Graveyard-BBS/issues/2\x13",
     );
     await settle();
-    expect(acts[0]).toMatchObject({ thread: "bugfix-address-git-repo-issue-2" });
+    expect(acts[0]).toMatchObject({
+      thread: "bugfix-address-git-repo-issue-2",
+    });
   });
   it("when no word fits, says so on Board and sends nothing", async () => {
     const { s, acts, screen } = start();

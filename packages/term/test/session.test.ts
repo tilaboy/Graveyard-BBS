@@ -273,11 +273,11 @@ describe("Sysop [N] new task", () => {
   });
   it("picks the board from the words, skips an empty body and avoids an existing thread id", async () => {
     const { s, acts } = start();
-    s.key("n\rLanding\x13"); // auto: "landing" -> websites-landing, no body
+    s.key("n\rBlog\x13"); // auto: "blog" -> websites-blog, no body
     s.key("n\rSnake\x13"); // auto: "snake" -> arcade; arcade-snake exists -> arcade-snake-2
     await settle();
     expect(acts.map((a) => a.type === "createTask" && a.thread)).toEqual([
-      "websites-landing",
+      "websites-blog",
       "arcade-snake-2",
     ]);
   });
@@ -304,7 +304,7 @@ describe("Sysop [N] new task", () => {
         voice: "v",
       },
     });
-    s.key("n\rTitle\x13");
+    s.key("na\rTitle\x13"); // a: #arcade
     await settle();
     expect(screen()).toContain("ACCESS DENIED");
     expect(screen()).toContain("ROLE_DENIED");
