@@ -194,6 +194,30 @@ describe("thread and tree posts", () => {
     ses.key("\x1b[D"); // ← folds the post back first
     expect(screen()).not.toContain("Task 1 holds lock");
   });
+
+  it("issue #1: a long post's head shows [+] when folded and [-] when unfolded", () => {
+    const f = fakeSource(s);
+    const out: string[] = [];
+    const ses = new Session({
+      source: f.src,
+      write: (x) => out.push(x),
+      reducedMotion: true,
+      now: () => T0,
+      rows: 60,
+    });
+    const lines = () => plain(out.at(-1) ?? "").split("\n");
+    const head = () => lines().find((l) => /#3\s+\d\d:\d\d/.test(l)) ?? "";
+    ses.key("x"); // login -> tree
+    ses.key("\x1b[B\x1b[C"); // the task, unfolded
+    expect(head()).toContain("[+] #3"); // MILESTONE, folded
+    // Short posts cannot fold, so they carry no marker.
+    const short = lines().find((l) => /#1\s+\d\d:\d\d/.test(l)) ?? "";
+    expect(short).not.toMatch(/\[[+-]\]/);
+    ses.key("\x1b[B\x1b[B\x1b[B\x1b[C"); // MILESTONE, unfolded
+    expect(head()).toContain("[-] #3");
+    ses.key("\x1b[D"); // ← folds it back
+    expect(head()).toContain("[+] #3");
+  });
 });
 
 describe("terminal size", () => {
