@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Flip Ghost · Graveyard BBS door game</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main id="game">
+      <canvas id="screen" width="480" height="640" aria-label="Flip Ghost playfield"></canvas>
+      <div id="hud" aria-live="polite">
+        <p id="hud-score">Score 0 · Best 0</p>
+        <p id="hud-line">👻 FLIP GHOST · Space / click / tap to flip · P phase · M sound</p>
+        <button id="phase-btn" type="button">PHASE (P)</button>
+      </div>
+    </main>
+    <script type="module" src="src/main.js"></script>
+  </body>
+</html>
