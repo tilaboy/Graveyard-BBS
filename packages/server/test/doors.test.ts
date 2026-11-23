@@ -25,13 +25,14 @@ const reviewer: Actor = { handle: "rv", role: "reviewer" };
 const artist: Actor = { handle: "a1", role: "artist" };
 
 /** A running task owned by `owner` with its packet acked. */
-function running(svc: Service, id: string, owner: Actor) {
+function running(svc: Service, id: string, owner: Actor, parent?: string) {
   svc.exec({
     type: "create_task",
     actor: sysop,
     thread_id: id,
     text: id,
     assigned: owner.handle,
+    ...(parent ? { parent } : {}),
   });
   svc.exec({ type: "issue_packet", actor: SERVER, thread_id: id });
   svc.exec({
@@ -412,6 +413,96 @@ describe("spec_check door (design stage gate)", () => {
     running(svc, "arcade-g", builder);
     await runDoor(svc, doors, builder, "arcade-g", "run_tests", {});
     expect(svc.gateOk("arcade-g")).toBe(false);
+  });
+});
+
+describe("gate per pipeline stage (#arcade split build, one merge at review)", () => {
+  const R = "arcade-split";
+  const owner: Actor = { handle: `reviewer-${R}-review`, role: "reviewer" };
+  async function root() {
+    const env = makeEnv();
+    const svc = env.open();
+    svc.exec({
+      type: "create_task",
+      actor: sysop,
+      thread_id: R,
+      text: "Split",
+    });
+    const wt = (await ensureWorktree(
+      env.config.repo,
+      env.config.dataDir,
+      R,
+    )) as string;
+    writeFileSync(join(wt, "ghost.js"), "// task 1\n");
+    execFileSync("git", ["add", "ghost.js"], { cwd: wt });
+    execFileSync(
+      "git",
+      ["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "t1"],
+      { cwd: wt },
+    );
+    return { env, svc };
+  }
+
+  it("a split build sub-thread passes on run_tests exit 0 with no merge; a red run_tests closes it", async () => {
+    const { svc } = await root();
+    running(svc, `${R}-build-1`, builder, R);
+    expect(svc.gateOk(`${R}-build-1`)).toBe(false);
+    await runDoor(svc, doors, builder, `${R}-build-1`, "run_tests", {});
+    expect(svc.gateOk(`${R}-build-1`)).toBe(true);
+    const red = makeEnv({ testCommand: "exit 2" }).open();
+    red.exec({ type: "create_task", actor: sysop, thread_id: R, text: "S" });
+    running(red, `${R}-build-2`, builder, R);
+    await runDoor(red, doors, builder, `${R}-build-2`, "run_tests", {});
+    expect(red.gateOk(`${R}-build-2`)).toBe(false);
+  });
+
+  it("git_merge refuses on a split build sub-thread, before any lock or EVIDENCE", async () => {
+    const { svc } = await root();
+    running(svc, `${R}-build-1`, reviewer, R);
+    const r = await runDoor(svc, doors, reviewer, `${R}-build-1`, "git_merge", {
+      lock_token: 1,
+    });
+    expect(!r.ok && r.error.code).toBe("ILLEGAL_TRANSITION");
+    expect(!r.ok && r.error.hint).toContain(`gy/${R}`);
+    expect(
+      svc.p.tasks[`${R}-build-1`]!.posts.some((p) => p.type === "EVIDENCE"),
+    ).toBe(false);
+  });
+
+  it("the review stage owner claims merge and git_merge merges gy/<root>; its gate needs that merge", async () => {
+    const { env, svc } = await root();
+    const T = `${R}-review`;
+    running(svc, T, owner, R);
+    await runDoor(svc, doors, owner, T, "run_tests", {});
+    expect(svc.gateOk(T)).toBe(false); // review: git_merge, not run_tests
+    const claim = svc.exec({
+      type: "claim",
+      actor: owner,
+      thread_id: T,
+      lock: "merge",
+    });
+    expect(claim.ok).toBe(true);
+    const m = await runDoor(svc, doors, owner, T, "git_merge", {
+      lock_token: svc.p.locks["merge"]!.holder!.token,
+    });
+    expect(m.ok && m.value.exit_code).toBe(0);
+    expect(m.ok && m.value.extra["branch"]).toBe(`gy/${R}`);
+    expect(existsSync(join(env.config.repo, "ghost.js"))).toBe(true);
+    expect(svc.gateOk(T)).toBe(true);
+  });
+
+  it("publish's gate is publish, with no merge", async () => {
+    const { env, svc } = await root();
+    const T = `${R}-publish`;
+    running(svc, T, release, R);
+    const wt = join(env.config.dataDir, "wt", R);
+    mkdirSync(join(wt, "games", "split"), { recursive: true });
+    writeFileSync(join(wt, "games", "split", "index.html"), "<canvas>");
+    await runDoor(svc, doors, release, T, "publish", {
+      kind: "game",
+      slug: "split",
+    });
+    expect(svc.gateOk(T)).toBe(true);
   });
 });
 

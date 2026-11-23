@@ -59,6 +59,12 @@ export async function runDoor(
       `door '${doorName}' is not installed`,
       "Check the board's Doors table.",
     );
+  if (door.name === "git_merge" && !svc.mayMerge(threadId))
+    return toolFail(
+      "ILLEGAL_TRANSITION",
+      `git_merge does not run on ${threadId}: its stage's gate names no merge`,
+      `Close this thread with REVIEW pass and done (run_tests is its gate). The top task's branch gy/${rootOf(svc.p.tasks, threadId)} is merged once, on the review stage thread.`,
+    );
 
   const args = door.argsSchema.safeParse(rawArgs ?? {});
   if (!args.success)

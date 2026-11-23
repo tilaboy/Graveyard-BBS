@@ -10,6 +10,14 @@ export interface Board extends BoardConfig {
   testCommand?: string;
   /** Pipeline stages whose Output is a Kiro spec (design): their gate is `spec_check`, not a merge. */
   specStages: string[];
+  /** Pipeline stages in order, each with the doors its "Gate to next stage" cell names. */
+  stages: Stage[];
+}
+
+export interface Stage {
+  name: string;
+  /** Doors (from the Doors table) the stage's gate names: their latest run must be exit 0. */
+  gateDoors: string[];
 }
 
 const cells = (line: string): string[] =>
@@ -60,12 +68,20 @@ export function parseBoard(name: string, md: string): Board {
   const specStages = rows
     .filter((r) => out >= 0 && /Kiro spec/i.test(r[out] ?? ""))
     .map((r) => r[0] ?? "");
+  const gate = head?.indexOf("Gate to next stage") ?? -1;
+  const stages = rows.map((r) => ({
+    name: r[0] ?? "",
+    gateDoors: Object.keys(doors).filter(
+      (d) => gate >= 0 && new RegExp(`\\b${d}\\b`).test(r[gate] ?? ""),
+    ),
+  }));
   return {
     name,
     doors,
     doorLocks,
     pathLocks,
     specStages,
+    stages,
     ...(cmd ? { testCommand: cmd } : {}),
   };
 }
@@ -85,6 +101,24 @@ export const boardOf = (threadId: string): string =>
   threadId.split("-")[0] ?? "";
 export const slugOf = (threadId: string): string =>
   threadId.slice(threadId.indexOf("-") + 1);
+
+/**
+ * The pipeline stage of a stage thread: `<parent>-<stage>`, or a split sub-thread
+ * `<parent>-<stage>-<n>` (the moderator opens both as children of the top task).
+ * Undefined for a top task or a thread the pipeline does not name.
+ */
+export function stageOf(
+  board: Board | undefined,
+  task: { parent?: string } | undefined,
+  threadId: string,
+): Stage | undefined {
+  const parent = task?.parent;
+  if (!board || !parent || !threadId.startsWith(`${parent}-`)) return;
+  const rest = threadId.slice(parent.length + 1);
+  return board.stages.find(
+    (s) => rest === s.name || new RegExp(`^${s.name}-\\d+$`).test(rest),
+  );
+}
 
 /** `**` crosses directories, `*` does not. */
 export function globMatch(glob: string, path: string): boolean {

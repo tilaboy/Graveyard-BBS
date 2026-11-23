@@ -17,7 +17,7 @@ import {
   type Result,
 } from "@graveyard/core";
 import { z } from "zod";
-import { boardOf, type Board } from "./boards.js";
+import { boardOf, stageOf, type Board } from "./boards.js";
 import type { Config } from "./config.js";
 import type { Store } from "./store.js";
 
@@ -140,7 +140,13 @@ export class Service {
     this.exec({ type: "tick", actor: SERVER });
   }
 
-  /** Board gate for `awaiting-review -> done`: the latest run of every door is green, a merge board has merged, a design stage passed spec_check. */
+  /**
+   * Board gate for `awaiting-review -> done`, per pipeline stage: a stage thread (split
+   * sub-threads too) needs the latest run of each door its stage's gate names to be exit 0
+   * (build: run_tests; review: git_merge; publish: publish). A design stage needs spec_check.
+   * A thread with no stage (or a stage whose gate names no door) keeps the old rule: every
+   * door's latest run green, and a merge board has merged.
+   */
   gateOk(threadId: string): boolean {
     const t = this.p.tasks[threadId];
     if (!t) return false;
@@ -151,16 +157,26 @@ export class Service {
       if (ev) latest.set(ev.door, ev.exit_code);
     }
     if (latest.size === 0) return false;
-    // A design stage (`<parent>-<stage>`, Output a Kiro spec) has no code to merge: spec_check is its gate.
     const board = this.boards[boardOf(threadId)];
-    if (
-      t.parent &&
-      board?.specStages.some((s) => threadId === `${t.parent}-${s}`)
-    )
+    const stage = stageOf(board, t, threadId);
+    // A design stage (Output a Kiro spec) has no code to merge: spec_check is its gate.
+    if (stage && board?.specStages.includes(stage.name))
       return latest.get("spec_check") === 0;
+    if (stage?.gateDoors.length)
+      return stage.gateDoors.every((d) => latest.get(d) === 0);
     const mergeBoard = board?.doors["git_merge"];
-    if (mergeBoard && latest.get("git_merge") !== 0) return false;
+    if (!stage && mergeBoard && latest.get("git_merge") !== 0) return false;
     return [...latest.values()].every((c) => c === 0);
+  }
+
+  /** git_merge runs only where the gate names it: top tasks, and stages like `review` (never a split build). */
+  mayMerge(threadId: string): boolean {
+    const stage = stageOf(
+      this.boards[boardOf(threadId)],
+      this.p.tasks[threadId],
+      threadId,
+    );
+    return !stage || stage.gateDoors.includes("git_merge");
   }
 
   /** The caller's current (non-terminal) task, newest first. */

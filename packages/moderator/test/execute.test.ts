@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import {
   mkdirSync,
   mkdtempSync,
@@ -41,11 +42,15 @@ import { BOARDS, opts } from "./log.js";
 
 const tools = buildTools();
 
-function world() {
+function world(testCommand?: string) {
   const dir = mkdtempSync(join(tmpdir(), "gy-mod-"));
   const repo = join(dir, "repo");
   createDemoRepo(repo);
-  const config = loadConfig(dir, { repo, dataDir: join(dir, "data") });
+  const config = loadConfig(dir, {
+    repo,
+    dataDir: join(dir, "data"),
+    ...(testCommand ? { testCommand } : {}),
+  });
   const svc = new Service(
     new Store(join(dir, "g.db")),
     config,
@@ -74,7 +79,7 @@ function world() {
     cwdOf: (t) => worktreeOf(config.dataDir, repo, svc.p.tasks, t),
     tasksMdOf: (root) => tasksMdOf(config.dataDir, root),
   };
-  return { svc, as, mod, bbs, runner, io, config };
+  return { svc, as, mod, bbs, runner, io, config, repo };
 }
 
 describe("executor against the real server", () => {
@@ -268,6 +273,114 @@ describe("executor against the real server", () => {
     expect(spawned[0]).toContain(`on thread ${R}-build-1`);
     expect(w.svc.p.tasks[`${R}-build-1`]?.text).toBe("build: Game loop");
     expect(w.svc.p.tasks[`${R}-build-2`]?.text).toBe("build: Phase power");
+  });
+
+  it("split build: 2 sub-threads reach done in parallel on run_tests alone, then the review stage merges gy/<root> once", async () => {
+    const w = world("true");
+    const R = "arcade-duo";
+    const md = "- [ ] 1. Loop\n- [ ] 2. Score\n";
+    // A vibe root has no design stage: hand the planner its tasks.md directly.
+    const o = opts({ tasksMd: { [R]: md } });
+    const ok = (r: { ok: boolean }) => expect(r.ok).toBe(true);
+    const wt = w.io.cwdOf!(R) as string;
+    await w.as("sysop", "sysop")("bbs_create_task", {
+      thread_id: R,
+      text: "Duo (vibe mode)",
+    });
+    let s = (await step(initialState(), w.io, o)).state;
+    const B = [`${R}-build-1`, `${R}-build-2`];
+    expect(
+      w.runner.calls.filter((c) => c.tool === "spawn_run").map((c) => c.thread),
+    ).toEqual(B);
+
+    // Both builders work at once in the shared worktree, each committing only its own file.
+    for (const [i, t] of B.entries()) {
+      const b = w.as(`builder-${t}`, "builder");
+      ok(
+        await b("bbs_ack_packet", {
+          thread_id: t,
+          packet_id: w.svc.p.tasks[t]!.packet!,
+        }),
+      );
+      ok(await b("bbs_set_status", { thread_id: t, to: "running" }));
+      writeFileSync(join(wt, `part${i}.js`), `// ${t}\n`);
+      execFileSync("git", ["add", `part${i}.js`], { cwd: wt });
+      execFileSync(
+        "git",
+        ["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", t],
+        { cwd: wt },
+      );
+      ok(await b("door_run", { thread_id: t, door: "run_tests" }));
+      ok(await b("bbs_set_status", { thread_id: t, to: "awaiting-review" }));
+    }
+    s = (await step(s, w.io, o)).state;
+    for (const t of B) {
+      const rv = w.as(`reviewer-${t}`, "reviewer");
+      ok(
+        await rv("bbs_ack_packet", {
+          thread_id: t,
+          packet_id: w.svc.p.tasks[t]!.packet!,
+        }),
+      );
+      ok(await rv("door_run", { thread_id: t, door: "run_tests" }));
+      const merge = await rv("door_run", {
+        thread_id: t,
+        door: "git_merge",
+        args: { lock_token: 1 },
+      });
+      expect(!merge.ok && merge.error.code).toBe("ILLEGAL_TRANSITION");
+      ok(await rv("bbs_review", { thread_id: t, verdict: "pass" }));
+      ok(await rv("bbs_set_status", { thread_id: t, to: "done" }));
+    }
+    expect(B.map((t) => w.svc.p.tasks[t]!.status)).toEqual(["done", "done"]);
+    expect(readdirSync(w.repo)).not.toContain("part0.js"); // nothing merged yet
+
+    // Both gates hold -> the review stage opens, owned by a reviewer who may claim merge.
+    s = (await step(s, w.io, o)).state;
+    const T = `${R}-review`;
+    const owner = w.as(`reviewer-${T}`, "reviewer");
+    expect(w.svc.p.tasks[T]?.owner).toBe(`reviewer-${T}`);
+    ok(
+      await owner("bbs_ack_packet", {
+        thread_id: T,
+        packet_id: w.svc.p.tasks[T]!.packet!,
+      }),
+    );
+    ok(await owner("bbs_set_status", { thread_id: T, to: "running" }));
+    const claim = await owner("bbs_claim_lock", {
+      thread_id: T,
+      lock: "merge",
+    });
+    ok(claim);
+    const merged = await owner("door_run", {
+      thread_id: T,
+      door: "git_merge",
+      args: { lock_token: w.svc.p.locks["merge"]!.holder!.token },
+    });
+    expect(merged.ok && (merged.value as { exit_code: number }).exit_code).toBe(
+      0,
+    );
+    expect(readdirSync(w.repo)).toEqual(
+      expect.arrayContaining(["part0.js", "part1.js"]),
+    );
+    ok(await owner("bbs_release_lock", { thread_id: T, lock: "merge" }));
+    ok(await owner("bbs_set_status", { thread_id: T, to: "awaiting-review" }));
+    // The owner never closes its own stage; a second reviewer does.
+    s = (await step(s, w.io, o)).state;
+    const closer = w.as(`reviewer2-${T}`, "reviewer");
+    ok(
+      await closer("bbs_ack_packet", {
+        thread_id: T,
+        packet_id: w.svc.p.tasks[T]!.packet!,
+      }),
+    );
+    ok(await closer("bbs_review", { thread_id: T, verdict: "pass" }));
+    ok(await closer("bbs_set_status", { thread_id: T, to: "done" }));
+    await step(s, w.io, o);
+    expect(w.runner.calls.at(-1)).toMatchObject({
+      thread: `${R}-publish`,
+      args: { agent: "graveyard-release" },
+    });
   });
 
   it("R9.2 store_lesson writes the hub and mirrors it to Kiro Crew learn_add", async () => {

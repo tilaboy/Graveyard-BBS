@@ -1,6 +1,7 @@
 import { fold, type Event, type Status } from "@graveyard/core";
 import { execute, type Io, type SpawnAction } from "./execute.js";
 import {
+  closerOf,
   isSpecStage,
   selectLessons,
   type Action,
@@ -94,6 +95,8 @@ export function respawnTarget(
   role?: string,
 ): { role: string; handle: string } {
   const r = role ?? (status === "awaiting-review" ? "reviewer" : rec.role);
+  if (r === "reviewer" && status === "awaiting-review")
+    return { role: r, handle: closerOf(thread, rec.role) };
   return { role: r, handle: r === rec.role ? rec.handle : `${r}-${thread}` };
 }
 

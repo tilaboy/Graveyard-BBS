@@ -99,7 +99,10 @@ export interface Opts {
   tasksMd?: Record<string, string>;
 }
 
-const WORK_ROLES = ["designer", "builder", "release", "artist"];
+const WORK_ROLES = ["designer", "builder", "reviewer", "release", "artist"];
+/** Who closes a thread in awaiting-review: never its owner, so a reviewer-owned stage gets a second reviewer. */
+export const closerOf = (thread: string, stageRole?: string): string =>
+  `${stageRole === "reviewer" ? "reviewer2" : "reviewer"}-${thread}`;
 /** Crash respawns (lease-expired) only; stage, reviewer and resume spawns do not count. */
 const MAX_RESPAWNS = 2;
 const MAX_LESSONS = 5;
@@ -111,6 +114,14 @@ const clip = (s: string, n: number) =>
 const boardOf = (id: string) => id.split("-")[0] ?? "";
 const words = (s: string) =>
   new Set(s.toLowerCase().match(/[a-z0-9]{4,}/g) ?? []);
+
+/** Stages a root works through: the board pipeline's agent stages; `vibe` drops spec-only ones. */
+function workOf(pipelines: Pipelines, root: string, text: string): Stage[] {
+  const vibe = /\bvibe\b/i.test(text);
+  return (pipelines[boardOf(root)] ?? []).filter(
+    (x) => WORK_ROLES.includes(x.role) && !(vibe && x.specOnly),
+  );
+}
 
 /** Is `thread` a stage whose Output is a Kiro spec? */
 export function isSpecStage(
@@ -227,6 +238,11 @@ export function plan(
   const self = o.self ?? "moderator";
   const sysop = o.sysop ?? "sysop";
   const limit = o.parallel ?? 3;
+  // A saved state keeps the stage list from routing time. Rebuild it from the current
+  // pipeline, so a root routed before the review stage was worked still gets it.
+  for (const [id, r] of Object.entries(s.roots))
+    if (o.pipelines[boardOf(id)] && p.tasks[id])
+      r.work = workOf(o.pipelines, id, p.tasks[id]!.text);
   const goalOf = (t: string) =>
     `${p.tasks[s.stages[t]?.root ?? t]?.text ?? ""} ${p.tasks[t]?.text ?? ""}`;
 
@@ -353,9 +369,7 @@ export function plan(
     ) {
       // R1.1 / R8.1: route, open the first stage and spawn it now; roots never wait for each other.
       const vibe = /\bvibe\b/i.test(e.body.text);
-      const work = o.pipelines[boardOf(t)]!.filter(
-        (x) => WORK_ROLES.includes(x.role) && !(vibe && x.specOnly),
-      );
+      const work = workOf(o.pipelines, t, e.body.text);
       s.roots[t] = { work, waiting: [] };
       const first = work[0];
       actions.push({
@@ -383,7 +397,7 @@ export function plan(
       });
     } else if (e.type === "STATUS" && rec) {
       if (e.body.to === "awaiting-review")
-        spawn(t, "reviewer", `reviewer-${t}`, false);
+        spawn(t, "reviewer", closerOf(t, rec.role), false);
       else if (e.body.to === "done") {
         distil(t);
         startNext(t);

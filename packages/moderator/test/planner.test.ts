@@ -199,6 +199,40 @@ describe("R3.1 split with a parallel limit", () => {
 });
 
 describe("R4 recovery", () => {
+  it("a state saved before reviewer stages were worked still opens review after build", () => {
+    const md = "- [ ] 1. a\n";
+    const o = opts({ tasksMd: { "arcade-old": md } });
+    const log = new Log().task("arcade-old", "Door game (vibe mode): old");
+    const a = plan(initialState(), log.events, o);
+    // As saved by the old moderator: no review stage in the root's work.
+    a.state.roots["arcade-old"]!.work = a.state.roots[
+      "arcade-old"
+    ]!.work.filter((x) => x.role !== "reviewer");
+    log.status("arcade-old-build-1", "awaiting-review", "done", "reviewer-1");
+    const b = plan(a.state, log.events, o);
+    const c = plan(
+      recordGate(b.state, "arcade-old-build-1", true),
+      log.events,
+      o,
+    );
+    expect(spawns(c.actions)).toMatchObject([
+      {
+        thread: "arcade-old-review",
+        role: "reviewer",
+        handle: "reviewer-arcade-old-review",
+      },
+    ]);
+    // Its own owner never closes it: awaiting-review brings a second reviewer.
+    log.status(
+      "arcade-old-review",
+      "running",
+      "awaiting-review",
+      "reviewer-arcade-old-review",
+    );
+    expect(spawns(plan(c.state, log.events, o).actions)).toMatchObject([
+      { thread: "arcade-old-review", handle: "reviewer2-arcade-old-review" },
+    ]);
+  });
   const base = () =>
     new Log()
       .task("slides-pitch", "Deck")
