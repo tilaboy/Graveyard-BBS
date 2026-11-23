@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Graveyard Snake · Graveyard BBS door game</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main id="game">
+      <h1>Graveyard Snake</h1>
+      <canvas
+        id="screen"
+        width="480"
+        height="480"
+        aria-label="Graveyard Snake playfield, 24 by 24 cells"
+      ></canvas>
+      <div id="hud">
+        <p>
+          Score <span id="score">0</span> · Length <span id="length">3</span> ·
+          Best <span id="best">0</span>
+        </p>
+        <p>Eaten <span id="eaten">ghost 0 · skeleton 0 · dinosaur 0</span></p>
+        <p>Spiders <span id="spiders">0</span></p>
+        <p id="status" aria-live="polite">
+          🎃 Press Space to rise from the grave
+        </p>
+      </div>
+      <section id="keys" aria-label="Keys">
+        <h2>Keys</h2>
+        <ul>
+          <li>Arrow keys or W A S D: turn</li>
+          <li>Space or Enter: start</li>
+          <li>P: pause or resume</li>
+          <li>R: restart with a new seed</li>
+          <li>M: sound on or off (off at start)</li>
+        </ul>
+        <p>
+          Eat ghosts (1 point), skeletons (3 points) and dinosaurs (5 points).
+          Touch a spider or its web and the run ends.
+        </p>
+      </section>
+    </main>
+    <script type="module" src="src/main.js"></script>
+  </body>
+</html>
