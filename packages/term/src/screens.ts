@@ -571,17 +571,18 @@ export function treeRows(s: State, v: View): TreeRow[] {
         const body = postBody(d, Math.max(20, v.cols - 2 - pind.length), "");
         // Long posts show their first lines; → or Enter unfolds the rest. One spare line just shows.
         const limit = d.compact ? 0 : POST_LINES;
+        const foldable = body.length > limit + (d.compact ? 0 : 1);
         const hidden =
-          open[key] === true || body.length <= limit + (d.compact ? 0 : 1)
-            ? 0
-            : body.length - limit;
+          open[key] === true || !foldable ? 0 : body.length - limit;
+        // Issue #1: [+] folded, [-] unfolded; a post that cannot fold keeps the blank column.
+        const marker = !foldable ? "    " : hidden ? "[+] " : "[-] ";
         const more = `${pind}… ${hidden} more line${hidden === 1 ? "" : "s"} (→)`;
         out.push({
           key,
           kind: "post",
           board: b,
           thread: t.thread_id,
-          line: `${ind}    ${postHead(e, i + 1, d, "")}`,
+          line: `${ind}${marker}${postHead(e, i + 1, d, "")}`,
           lines: hidden
             ? [
                 ...body.slice(0, limit).map((l) => pind + l),
