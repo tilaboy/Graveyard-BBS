@@ -133,17 +133,25 @@ describe("new-task form: a box with Board, Title, Body and [ Submit ]", () => {
     s.key("\x1b[Z");
     expect(field()).toBe("submit");
   });
-  it("Board is a picker: ↑↓ cycle the five, a letter jumps, nothing else can be typed", () => {
+  it("Board is a picker: ↑↓ cycle auto and the five, a letter jumps, nothing else can be typed", () => {
     const { s } = start();
-    s.key("xn"); // tree cursor is on #arcade
+    s.key("xn"); // on the tree the form starts on auto
+    expect(s.view.form?.board).toBe("auto");
+    s.key("\x1b[B");
+    expect(s.view.form?.board).toBe("arcade");
     s.key("\x1b[B");
     expect(s.view.form?.board).toBe("websites");
     s.key("\x1b[A\x1b[A");
+    expect(s.view.form?.board).toBe("auto");
+    s.key("\x1b[A");
     expect(s.view.form?.board).toBe("bugfix");
     s.key("m");
     expect(s.view.form?.board).toBe("media");
     s.key("S");
     expect(s.view.form?.board).toBe("slides");
+    s.key("a"); // a letter jumps to a board, never back to auto
+    expect(s.view.form?.board).toBe("arcade");
+    s.key("s");
     s.key("qxz\x7f"); // letters no board starts with, and Backspace: no change
     expect(s.view.form?.board).toBe("slides");
   });
@@ -167,7 +175,7 @@ describe("new-task form: a box with Board, Title, Body and [ Submit ]", () => {
   });
   it("a paste with newlines lands whole in Body", async () => {
     const { s, acts } = start();
-    s.key("xn\tPasted\t");
+    s.key("xna\tPasted\t"); // a: #arcade
     s.key("line one\rline two\r\rline four"); // xterm turns pasted \n into \r
     expect(s.view.form?.body).toBe("line one\nline two\n\nline four");
     s.key("\t\r"); // Tab to [ Submit ], Enter
@@ -260,7 +268,7 @@ describe("the 'Created … (pending).' notice clears itself", () => {
     const screen = () => plain(out.at(-1) ?? "");
     s.key("x");
     s.key("n");
-    s.key("\t"); // default board
+    s.key("a\t"); // #arcade
     for (const c of "Ghost") s.key(c);
     s.key("\x13");
     await settle();
@@ -272,5 +280,57 @@ describe("the 'Created … (pending).' notice clears itself", () => {
     now += 200;
     s.tick();
     expect(screen()).not.toContain("(pending).");
+  });
+});
+
+// Issue #2 (https://github.com/tilaboy/Graveyard-BBS/issues/2): the board is chosen for the
+// Sysop from the task's words, so a new task no longer needs a board picked first.
+describe("new task: Board auto picks the board from the words", () => {
+  it("starts on auto and shows the live guess with the words that chose it", () => {
+    const { s, screen } = start();
+    s.key("xn");
+    expect(s.view.form?.board).toBe("auto");
+    expect(screen()).toContain("auto → type a title");
+    s.key("\tSnake game");
+    expect(screen()).toContain("auto → #arcade (snake, game)");
+  });
+  it("submits on the guessed board and says which board and why", async () => {
+    const { s, acts, screen } = start();
+    s.key("xn\tPitch deck\tTen slides for demo day\x13");
+    await settle();
+    expect(acts).toEqual([
+      {
+        type: "createTask",
+        thread: "slides-pitch-deck",
+        text: "Pitch deck — Ten slides for demo day",
+      },
+    ]);
+    expect(screen()).toContain("Created slides-pitch-deck (pending).");
+    expect(screen()).toContain("Board #slides (auto: pitch, deck, slides).");
+  });
+  it("reads a GitHub issue link as #bugfix", async () => {
+    const { s, acts } = start();
+    s.key(
+      "xn\tAddress Git Repo Issue 2\thttps://github.com/tilaboy/Graveyard-BBS/issues/2\x13",
+    );
+    await settle();
+    expect(acts[0]).toMatchObject({ thread: "bugfix-address-git-repo-issue-2" });
+  });
+  it("when no word fits, says so on Board and sends nothing", async () => {
+    const { s, acts, screen } = start();
+    s.key("xn\tDig the grave\x13");
+    expect(screen()).toContain("auto → no board fits yet");
+    expect(screen()).toContain(
+      "No board fits these words. Pick one with ↑↓ or a letter.",
+    );
+    expect(s.view.form?.field).toBe("board");
+    await settle();
+    expect(acts).toEqual([]);
+  });
+  it("a board picked by hand wins over the words", async () => {
+    const { s, acts } = start();
+    s.key("xnm\tSnake game\x13"); // m: #media
+    await settle();
+    expect(acts[0]).toMatchObject({ thread: "media-snake-game" });
   });
 });
