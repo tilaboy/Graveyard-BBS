@@ -21,6 +21,7 @@ import {
   isOpen,
   online,
   openAsks,
+  shownStatus,
   stalledMin,
   ago,
   parseJson,
@@ -411,7 +412,7 @@ export function threadLines(s: State, v: View): string[] {
   const w = v.cols - 6;
   const idle = stalledMin(s, t);
   const out = [
-    `  ${sgr(COLOR.bold, t.thread_id)}  ${statusLine(t.status)}${t.reason ? ` (${t.reason})` : ""}`,
+    `  ${sgr(COLOR.bold, t.thread_id)}  ${statusLine(shownStatus(s, t))}${t.reason ? ` (${t.reason})` : ""}`,
     ...(idle === undefined
       ? []
       : [
@@ -554,7 +555,7 @@ export function treeRows(s: State, v: View): TreeRow[] {
         idle === undefined
           ? ""
           : ` ${sgr(`${COLOR.ask};${COLOR.bold}`, `⚠ stalled ${ago(idle)}`)}`;
-      const row = `${ind}${mark}${fold} ${pad(badge(t.status), badgeW)} ${n ? sgr(n.style, title) : title} ${pad(cut(t.owner ?? "—", 12), 12)}${sub}${stall}${n ? ` ${n.lane}` : ""}`;
+      const row = `${ind}${mark}${fold} ${pad(badge(shownStatus(s, t)), badgeW)} ${n ? sgr(n.style, title) : title} ${pad(cut(t.owner ?? "—", 12), 12)}${sub}${stall}${n ? ` ${n.lane}` : ""}`;
       out.push({
         key: `t:${t.thread_id}`,
         kind: "task",
@@ -660,8 +661,19 @@ function who(s: State): string[] {
           .map((h) => h.length),
       ),
     ) + 2;
-  const rows = Object.values(s.p.callers)
-    .filter((c) => c.handle !== "server")
+  // Finished agents leave the list: show the Sysop, the moderator, anyone online, anyone
+  // with an open task or a lock. The rest are counted on one line.
+  const working = (h: string) =>
+    on.has(h) ||
+    /^(sysop|moderator)/.test(h) ||
+    Object.values(s.p.tasks).some((x) => x.owner === h && isOpen(x)) ||
+    Object.values(s.p.locks).some(
+      (l) => l.holder?.caller === h || l.queue.some((q) => q.caller === h),
+    );
+  const all = Object.values(s.p.callers).filter((c) => c.handle !== "server");
+  const resting = all.filter((c) => !working(c.handle)).length;
+  const rows = all
+    .filter((c) => working(c.handle))
     .map((c) => {
       const t = Object.values(s.p.tasks)
         .filter((x) => x.owner === c.handle && isOpen(x))
@@ -697,6 +709,15 @@ function who(s: State): string[] {
       `  ${pad("caller", cw)}${pad("role", 11)}${pad("board", 12)}${pad("status", badgeW + 1)}${pad("lock / queue", 22)}${pad("left", 7)}state`,
     ),
     ...(rows.length ? rows : [`  ${EMOJI.idle} Nobody has called yet.`]),
+    ...(resting
+      ? [
+          "",
+          sgr(
+            COLOR.dim,
+            `  ${EMOJI.done} ${resting} finished agent${resting === 1 ? "" : "s"} laid to rest (their work is in the threads)`,
+          ),
+        ]
+      : []),
   ];
 }
 

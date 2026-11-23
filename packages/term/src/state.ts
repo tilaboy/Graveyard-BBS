@@ -4,6 +4,7 @@ import {
   type Event,
   type Projections,
   type Task,
+  type Status,
 } from "@graveyard/core";
 import { z } from "zod";
 import type { FileContent } from "./source.js";
@@ -193,6 +194,26 @@ export const boardNames = (): string[] => [...BOARDS];
 /** Stage and split threads the moderator opened under a task, oldest first. */
 export const childrenOf = (s: State, parent: string): Task[] =>
   threadsOf(s).filter((t) => t.parent === parent);
+
+/**
+ * What a task row shows. A top task with stages never moves itself (the stages do the work),
+ * so it shows its stages' state: needs-you > running > blocked > review > pending, and done
+ * once every stage is done. Display only: the stored status is untouched.
+ */
+export function shownStatus(s: State, t: Task): Status {
+  const kids = childrenOf(s, t.thread_id);
+  if (kids.length === 0 || t.status !== "pending") return t.status;
+  const all = (x: Task): Task[] => [
+    x,
+    ...childrenOf(s, x.thread_id).flatMap(all),
+  ];
+  const st = kids.flatMap(all).map((k) => k.status);
+  if (st.every((x) => x === "done" || x === "cancelled"))
+    return st.some((x) => x === "done") ? "done" : "cancelled";
+  for (const x of ["blocked", "running", "awaiting-review"] as const)
+    if (st.includes(x)) return x;
+  return "pending";
+}
 
 /** A task with no (known) parent: the row the tree starts from. */
 const isTop = (s: State, t: Task): boolean => !t.parent || !s.p.tasks[t.parent];
