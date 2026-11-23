@@ -14,6 +14,7 @@ import {
 } from "../src/doors/deploy.js";
 import { makeImageGen } from "../src/doors/image-gen.js";
 import { readPublished } from "../src/doors/publish.js";
+import { answer } from "../src/sysop.js";
 import { ensureWorktree } from "../src/worktree.js";
 import { makeEnv } from "./helpers.js";
 
@@ -254,6 +255,163 @@ describe("gate (done needs green evidence; merge boards need a merge)", () => {
     running(svc, "bugfix-g", builder);
     await runDoor(svc, doors, builder, "bugfix-g", "run_tests", {});
     expect(svc.gateOk("bugfix-g")).toBe(false); // #bugfix lists git_merge
+  });
+});
+
+describe("spec_check door (design stage gate)", () => {
+  const designer: Actor = {
+    handle: "designer-arcade-flip-design",
+    role: "designer",
+  };
+  const T = "arcade-flip-design";
+
+  /** Root arcade-flip + its running design stage; spec files written into the ROOT worktree. */
+  async function design(files: Record<string, string>) {
+    const env = makeEnv();
+    const svc = env.open();
+    svc.exec({
+      type: "create_task",
+      actor: sysop,
+      thread_id: "arcade-flip",
+      text: "Flip Ghost",
+    });
+    svc.exec({
+      type: "create_task",
+      actor: sysop,
+      thread_id: T,
+      text: "design: Flip Ghost",
+      assigned: designer.handle,
+      parent: "arcade-flip",
+    });
+    svc.exec({ type: "issue_packet", actor: SERVER, thread_id: T });
+    svc.exec({
+      type: "ack",
+      actor: designer,
+      thread_id: T,
+      packet_id: svc.p.tasks[T]!.packet!,
+    });
+    svc.exec({
+      type: "set_status",
+      actor: designer,
+      thread_id: T,
+      to: "running",
+      gate_ok: false,
+    });
+    const wt = (await ensureWorktree(
+      env.config.repo,
+      env.config.dataDir,
+      "arcade-flip",
+    )) as string;
+    const dir = join(wt, ".kiro", "specs", "arcade-flip");
+    mkdirSync(dir, { recursive: true });
+    for (const [f, text] of Object.entries(files))
+      writeFileSync(join(dir, f), text);
+    return svc;
+  }
+  const SPEC = {
+    "requirements.md": "# R1 WHEN flip THEN rise\n",
+    "design.md": "# Design\n",
+    "tasks.md": "- [ ] 1. Game loop\n- [ ] 2. Phase power\n",
+  };
+  /** Designer asks, Sysop answers `text`. */
+  const askAndAnswer = (svc: Service, text: string) => {
+    const asked = svc.exec({
+      type: "post",
+      actor: designer,
+      thread_id: T,
+      kind: "ASK",
+      body: { text: "approve the spec?", to: "sysop" },
+    });
+    const ask_id = asked.ok ? asked.value[0]!.id : "";
+    answer(svc, sysop, { thread_id: T, ask_id, text });
+  };
+  const check = async (svc: Service, who: Actor = designer) => {
+    const r = await runDoor(svc, doors, who, T, "spec_check", {});
+    expect(r.ok).toBe(true);
+    return lastEvidence(svc, T);
+  };
+
+  it("fails on a missing file", async () => {
+    const svc = await design({
+      "requirements.md": "x",
+      "tasks.md": "- [ ] 1. a\n",
+    });
+    askAndAnswer(svc, "approve");
+    const ev = await check(svc);
+    expect(ev.exit_code).toBe(1);
+    expect(ev.extra["problems"]).toEqual(["missing design.md"]);
+    expect(svc.gateOk(T)).toBe(false);
+  });
+
+  it("fails on an empty tasks.md, and on a tasks.md with no open `- [ ]` task", async () => {
+    const svc = await design({ ...SPEC, "tasks.md": "  \n" });
+    askAndAnswer(svc, "approve");
+    expect((await check(svc)).extra["problems"]).toEqual(["empty tasks.md"]);
+    const svc2 = await design({
+      ...SPEC,
+      "tasks.md": "- [x] 1. done already\n",
+    });
+    askAndAnswer(svc2, "approve");
+    expect((await check(svc2)).extra["problems"]).toEqual([
+      "tasks.md has no open `- [ ]` task",
+    ]);
+  });
+
+  it("fails with no ???, and when the latest ??? was not answered approve", async () => {
+    const svc = await design(SPEC);
+    expect((await check(svc)).extra["problems"]).toEqual(["no ??? asked yet"]);
+    askAndAnswer(svc, "approve");
+    askAndAnswer(svc, "reject: more bats");
+    expect((await check(svc)).extra["problems"]).toEqual([
+      "the latest ??? has no ANSWER approve",
+    ]);
+  });
+
+  it("passes with the three files and an approve; the design gate needs no git_merge", async () => {
+    const svc = await design(SPEC);
+    askAndAnswer(svc, "approve");
+    const ev = await check(svc);
+    expect(ev).toMatchObject({ door: "spec_check", exit_code: 0 });
+    expect(ev.extra["spec_dir"]).toBe(".kiro/specs/arcade-flip");
+    expect(svc.gateOk(T)).toBe(true);
+  });
+
+  it("a reviewer may ACK the review packet and run spec_check; the owner still may not review", async () => {
+    const svc = await design(SPEC);
+    askAndAnswer(svc, "approve");
+    await check(svc);
+    svc.exec({
+      type: "set_status",
+      actor: designer,
+      thread_id: T,
+      to: "awaiting-review",
+      gate_ok: false,
+    });
+    expect(svc.p.tasks[T]!.status).toBe("awaiting-review");
+    svc.exec({ type: "issue_packet", actor: SERVER, thread_id: T });
+    const ack = svc.exec({
+      type: "ack",
+      actor: reviewer,
+      thread_id: T,
+      packet_id: svc.p.tasks[T]!.packet!,
+    });
+    expect(ack.ok).toBe(true);
+    expect((await check(svc, reviewer)).exit_code).toBe(0);
+    const self = svc.exec({
+      type: "review",
+      actor: designer,
+      thread_id: T,
+      verdict: "pass",
+      reasons: [],
+    });
+    expect(!self.ok && self.error.code).toBe("ROLE_DENIED");
+  });
+
+  it("other arcade stages keep the old gate: green run_tests alone is not enough (git_merge)", async () => {
+    const svc = makeEnv().open();
+    running(svc, "arcade-g", builder);
+    await runDoor(svc, doors, builder, "arcade-g", "run_tests", {});
+    expect(svc.gateOk("arcade-g")).toBe(false);
   });
 });
 

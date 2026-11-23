@@ -140,7 +140,7 @@ export class Service {
     this.exec({ type: "tick", actor: SERVER });
   }
 
-  /** Board gate for `awaiting-review -> done`: the latest run of every door is green, and a merge board has merged. */
+  /** Board gate for `awaiting-review -> done`: the latest run of every door is green, a merge board has merged, a design stage passed spec_check. */
   gateOk(threadId: string): boolean {
     const t = this.p.tasks[threadId];
     if (!t) return false;
@@ -151,7 +151,14 @@ export class Service {
       if (ev) latest.set(ev.door, ev.exit_code);
     }
     if (latest.size === 0) return false;
-    const mergeBoard = this.boards[boardOf(threadId)]?.doors["git_merge"];
+    // A design stage (`<parent>-<stage>`, Output a Kiro spec) has no code to merge: spec_check is its gate.
+    const board = this.boards[boardOf(threadId)];
+    if (
+      t.parent &&
+      board?.specStages.some((s) => threadId === `${t.parent}-${s}`)
+    )
+      return latest.get("spec_check") === 0;
+    const mergeBoard = board?.doors["git_merge"];
     if (mergeBoard && latest.get("git_merge") !== 0) return false;
     return [...latest.values()].every((c) => c === 0);
   }

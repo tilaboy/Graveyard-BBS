@@ -21,12 +21,15 @@ const roots = () =>
     .task("slides-pitch", "Six-slide pitch deck");
 
 describe("pipelines come from the board steering files", () => {
-  it("parses stage, role and spec-only mode", () => {
+  it("parses stage, role, spec-only mode and spec output", () => {
     expect(O.pipelines["arcade"]?.[0]).toEqual({
       name: "design",
       role: "designer",
       specOnly: true,
+      spec: true,
     });
+    expect(O.pipelines["websites"]?.[0]?.spec).toBe(true);
+    expect(O.pipelines["slides"]?.[0]?.spec).toBe(false);
     expect(O.pipelines["bugfix"]?.map((s) => s.role)).toEqual([
       "moderator",
       "builder",

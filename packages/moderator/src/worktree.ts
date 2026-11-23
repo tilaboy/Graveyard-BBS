@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 /** The top task of a thread: stage and split threads follow `parent` up to the Sysop's task. */
@@ -37,4 +37,17 @@ export function worktreeOf(
     git("worktree", "add", d, "-b", `gy/${root}`) ||
     git("worktree", "add", d, `gy/${root}`); // branch left over from an earlier run
   return made && existsSync(d) ? d : undefined;
+}
+
+/**
+ * `tasks.md` the designer left in the root's worktree: `<data-dir>/wt/<root>/.kiro/specs/<root>/`
+ * (the server's spec_check door also accepts `.kiro/specs/<slug>/`, the id after `<board>-`).
+ */
+export function tasksMdOf(dataDir: string, root: string): string | undefined {
+  const slug = root.slice(root.indexOf("-") + 1);
+  for (const d of [root, slug]) {
+    const f = join(dataDir, "wt", root, ".kiro", "specs", d, "tasks.md");
+    if (existsSync(f)) return readFileSync(f, "utf8");
+  }
+  return undefined;
 }

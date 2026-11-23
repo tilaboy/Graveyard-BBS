@@ -198,7 +198,13 @@ function run(em: Emitter, cmd: Command): Result<unknown> {
       return ok(undefined);
 
     case "ack":
-      if (actor.handle !== t.owner) return denied(actor, "ACK for this task");
+      // The moderator issues a fresh packet when it spawns the reviewer, so a reviewer
+      // of an awaiting-review task may ACK it too (doors need the ACK; status rules do not change).
+      if (
+        actor.handle !== t.owner &&
+        !(actor.role === "reviewer" && t.status === "awaiting-review")
+      )
+        return denied(actor, "ACK for this task");
       if (cmd.packet_id !== t.packet)
         return fail(
           "NO_ACK",

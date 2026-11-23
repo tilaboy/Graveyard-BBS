@@ -1,16 +1,25 @@
-import { mkdtempSync, readdirSync, readFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { loadBoards } from "../../server/src/boards.js";
 import { Service } from "../../server/src/commands.js";
 import { loadConfig } from "../../server/src/config.js";
+import { defaultDoors } from "../../server/src/doors/index.js";
 import { createDemoRepo } from "../../server/src/seed.js";
 import { Store } from "../../server/src/store.js";
+import { answer } from "../../server/src/sysop.js";
 import { buildTools, callTool, type ToolCtx } from "../../server/src/tools.js";
 import { step, type Bbs, type Io } from "../src/execute.js";
 import { initialState, seedHub } from "../src/planner.js";
 import { agentName, KiroCliRunner, KiroCrewRunner } from "../src/runner.js";
+import { tasksMdOf, worktreeOf } from "../src/worktree.js";
 import { BOARDS, opts } from "./log.js";
 
 const tools = buildTools();
@@ -27,7 +36,7 @@ function world() {
   );
   const ctx = (handle: string, role: ToolCtx["actor"]["role"]): ToolCtx => ({
     svc,
-    doors: [],
+    doors: defaultDoors(),
     actor: { handle, role },
   });
   const as =
@@ -45,8 +54,10 @@ function world() {
     runner,
     now: () => Date.UTC(2026, 9, 31, 23, 0, 0),
     bbsUrl: "http://127.0.0.1:50914",
+    cwdOf: (t) => worktreeOf(config.dataDir, repo, svc.p.tasks, t),
+    tasksMdOf: (root) => tasksMdOf(config.dataDir, root),
   };
-  return { svc, as, mod, bbs, runner, io };
+  return { svc, as, mod, bbs, runner, io, config };
 }
 
 describe("executor against the real server", () => {
@@ -138,6 +149,106 @@ describe("executor against the real server", () => {
     });
     expect(direct.ok).toBe(false);
     expect(w.svc.p.tasks[t]!.status).toBe("running");
+  });
+
+  it("design stage: ASK -> ANSWER approve -> spec_check -> awaiting-review -> reviewer -> REVIEW pass -> done -> build split from the root worktree tasks.md", async () => {
+    const w = world();
+    const o = opts();
+    const R = "arcade-flip";
+    const T = `${R}-design`;
+    const call = (tool: string) =>
+      String(
+        w.runner.calls.filter((c) => c.tool === tool).at(-1)?.args["task"],
+      );
+    await w.as("sysop", "sysop")("bbs_create_task", {
+      thread_id: R,
+      text: "Flip Ghost (spec mode)",
+    });
+    let s = (await step(initialState(), w.io, o)).state;
+    expect(call("spawn_run")).toContain("Design stage steps:");
+
+    // The designer writes the spec in the ROOT worktree and asks.
+    const designer = w.as(`designer-${T}`, "designer");
+    await designer("bbs_ack_packet", {
+      thread_id: T,
+      packet_id: w.svc.p.tasks[T]!.packet!,
+    });
+    await designer("bbs_set_status", { thread_id: T, to: "running" });
+    const dir = join(w.config.dataDir, "wt", R, ".kiro", "specs", R);
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, "requirements.md"), "# R1 WHEN flip THEN rise\n");
+    writeFileSync(join(dir, "design.md"), "# Design\n");
+    writeFileSync(
+      join(dir, "tasks.md"),
+      "# Tasks\n- [ ] 1. Game loop\n  - [ ] 1.1 nested, not split\n- [ ] 2. Phase power\n",
+    );
+    const asked = await designer("bbs_ask", {
+      thread_id: T,
+      text: "approve?",
+    });
+    const ask_id = (asked as { value: { ask_id: string } }).value.ask_id;
+    s = (await step(s, w.io, o)).state;
+
+    // Sysop approves: the designer is resumed with the post-approval steps.
+    answer(
+      w.svc,
+      { handle: "sysop", role: "sysop" },
+      { thread_id: T, ask_id, text: "approve" },
+    );
+    s = (await step(s, w.io, o)).state;
+    expect(call("spawn_run")).toMatch(/resumed[\s\S]*door_run spec_check/);
+    await designer("bbs_ack_packet", {
+      thread_id: T,
+      packet_id: w.svc.p.tasks[T]!.packet!,
+    });
+    const ev = await designer("door_run", {
+      thread_id: T,
+      door: "spec_check",
+    });
+    expect(ev.ok && (ev.value as { exit_code: number }).exit_code).toBe(0);
+    // No skipping review: the designer cannot close its own stage.
+    expect(
+      (await designer("bbs_set_status", { thread_id: T, to: "done" })).ok,
+    ).toBe(false);
+    expect(
+      (
+        await designer("bbs_set_status", {
+          thread_id: T,
+          to: "awaiting-review",
+        })
+      ).ok,
+    ).toBe(true);
+
+    // The planner spawns a reviewer, told how to review a spec.
+    s = (await step(s, w.io, o)).state;
+    expect(w.runner.calls.at(-1)?.args["agent"]).toBe("graveyard-reviewer");
+    expect(call("spawn_run")).toContain("Design stage review");
+    const reviewer = w.as(`reviewer-${T}`, "reviewer");
+    expect(
+      (
+        await reviewer("bbs_ack_packet", {
+          thread_id: T,
+          packet_id: w.svc.p.tasks[T]!.packet!,
+        })
+      ).ok,
+    ).toBe(true);
+    await reviewer("door_run", { thread_id: T, door: "spec_check" });
+    await reviewer("bbs_review", { thread_id: T, verdict: "pass" });
+    expect(
+      (await reviewer("bbs_set_status", { thread_id: T, to: "done" })).ok,
+    ).toBe(true);
+
+    // Gate holds -> build opens, one sub-thread per top-level task of the root's tasks.md.
+    const before = w.runner.calls.length;
+    await step(s, w.io, o);
+    const spawned = w.runner.calls
+      .slice(before)
+      .filter((c) => c.tool === "spawn_run")
+      .map((c) => String(c.args["task"]));
+    expect(spawned).toHaveLength(2);
+    expect(spawned[0]).toContain(`on thread ${R}-build-1`);
+    expect(w.svc.p.tasks[`${R}-build-1`]?.text).toBe("build: Game loop");
+    expect(w.svc.p.tasks[`${R}-build-2`]?.text).toBe("build: Phase power");
   });
 
   it("R9.2 store_lesson writes the hub and mirrors it to Kiro Crew learn_add", async () => {

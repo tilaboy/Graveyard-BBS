@@ -17,10 +17,11 @@ import { gitMerge } from "./git-merge.js";
 import { imageGen } from "./image-gen.js";
 import { publish } from "./publish.js";
 import { runTests } from "./run-tests.js";
+import { specCheck } from "./spec-check.js";
 import type { RegisteredDoor } from "./types.js";
 
 export function defaultDoors(): RegisteredDoor[] {
-  return [runTests, gitMerge, deploy, imageGen, publish];
+  return [runTests, gitMerge, deploy, imageGen, publish, specCheck];
 }
 
 const TokenArg = z.object({ lock_token: z.number().int().positive() });

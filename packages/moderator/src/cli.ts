@@ -1,10 +1,4 @@
-import {
-  existsSync,
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { EventSchema, fold } from "@graveyard/core";
@@ -12,6 +6,7 @@ import { z } from "zod";
 import { execute, step, type Bbs } from "./execute.js";
 import { loadPipelines } from "./pipeline.js";
 import {
+  isSpecStage,
   recover,
   seedHub,
   selectLessons,
@@ -19,11 +14,11 @@ import {
   type State,
 } from "./planner.js";
 import { KiroCliRunner, KiroCrewRunner } from "./runner.js";
-import { worktreeOf } from "./worktree.js";
+import { tasksMdOf, worktreeOf } from "./worktree.js";
 
 const USAGE = `graveyard-moderator step [--runner crew|cli] [--boards DIR] [--data-dir DIR] [--project NAME]
 graveyard-moderator agent <thread> <agent-id>     remember a Kiro Crew agent id (for steering)
-graveyard-moderator respawn <thread>              redo a spawn nobody made (rotates the child token)
+graveyard-moderator respawn <thread>              queue a resume spawn for a stage with no live agent (rotates the child token)
 
 Env: GRAVEYARD_URL (default http://127.0.0.1:2626), GRAVEYARD_TOKEN (the moderator's token).
 "step" prints JSON: crew_calls (Kiro Crew tool calls YOU must make), errors, actions.`;
@@ -55,17 +50,6 @@ const writeJson = (path: string, v: unknown) => {
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, JSON.stringify(v, null, 2));
 };
-
-/** `tasks.md` the designer left in any worktree `<dataDir>/wt/<root>-*`. */
-function tasksMdOf(dataDir: string, root: string): string | undefined {
-  const wt = join(dataDir, "wt");
-  if (!existsSync(wt)) return undefined;
-  for (const d of readdirSync(wt).filter((x) => x.startsWith(`${root}-`))) {
-    const f = join(wt, d, "tasks.md");
-    if (existsSync(f)) return readFileSync(f, "utf8");
-  }
-  return undefined;
-}
 
 async function main(argv: string[]) {
   const { values, positionals } = parseArgs({
@@ -156,6 +140,8 @@ async function main(argv: string[]) {
           role: rec.role,
           resume: true,
           lessons: selectLessons(state.lessons, goal, t.split("-")[0] ?? "", t),
+          // A design stage resumed after the Sysop's approve gets the spec_check steps.
+          ...(isSpecStage(opts.pipelines, rec, t) ? { spec: true } : {}),
         },
       ];
     });

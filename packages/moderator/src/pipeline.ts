@@ -6,6 +6,8 @@ export interface Stage {
   role: string;
   /** #arcade: `vibe` mode skips stages whose Mode cell says "spec only". */
   specOnly: boolean;
+  /** Output is a Kiro spec (design): its agents get the spec_check steps. */
+  spec: boolean;
 }
 export type Pipelines = Record<string, Stage[]>;
 
@@ -37,6 +39,7 @@ export function parsePipeline(md: string): Stage[] {
       name: (c[0] ?? "").replace(/`/g, ""),
       role: /^\w+/.exec(role)?.[0] ?? "",
       specOnly: /spec only/i.test(mode),
+      spec: /Kiro spec/i.test(c[head.indexOf("Output")] ?? ""),
     });
   }
   return out;

@@ -23,6 +23,8 @@ export type Action =
       role: string;
       resume: boolean;
       lessons: Lesson[];
+      /** The stage writes a Kiro spec (design): the agent gets the spec_check steps. */
+      spec?: boolean;
     }
   | { type: "steer"; thread: string; message: string }
   | { type: "check_gate"; thread: string }
@@ -107,6 +109,17 @@ const clip = (s: string, n: number) =>
 const boardOf = (id: string) => id.split("-")[0] ?? "";
 const words = (s: string) =>
   new Set(s.toLowerCase().match(/[a-z0-9]{4,}/g) ?? []);
+
+/** Is `thread` a stage whose Output is a Kiro spec? */
+export function isSpecStage(
+  pipelines: Pipelines,
+  rec: { stage: string } | undefined,
+  thread: string,
+): boolean {
+  return Boolean(
+    rec && pipelines[boardOf(thread)]?.find((x) => x.name === rec.stage)?.spec,
+  );
+}
 
 /** Unchecked top-level items of a Kiro `tasks.md`: `- [ ] 3. text`. */
 export function unchecked(md = ""): string[] {
@@ -222,6 +235,7 @@ export function plan(
     resume: boolean,
   ) => {
     s.agents[thread] = (s.agents[thread] ?? 0) + 1;
+    const spec = isSpecStage(o.pipelines, s.stages[thread], thread);
     actions.push({
       type: "spawn",
       thread,
@@ -234,6 +248,7 @@ export function plan(
         boardOf(thread),
         thread,
       ),
+      ...(spec ? { spec } : {}),
     });
   };
 

@@ -8,6 +8,8 @@ export interface Board extends BoardConfig {
   doorLocks: Record<string, string | undefined>;
   pathLocks: { glob: string; lock: string }[];
   testCommand?: string;
+  /** Pipeline stages whose Output is a Kiro spec (design): their gate is `spec_check`, not a merge. */
+  specStages: string[];
 }
 
 const cells = (line: string): string[] =>
@@ -16,8 +18,8 @@ const cells = (line: string): string[] =>
     .slice(1, -1)
     .map((c) => c.trim().replace(/^`|`$/g, ""));
 
-/** Rows of the first markdown table under a `## <heading>` section. */
-function tableRows(md: string, heading: string): string[][] {
+/** Rows of the first markdown table under a `## <heading>` section (with `withHead`, the header row first). */
+function tableRows(md: string, heading: string, withHead = false): string[][] {
   const start = md.split("\n").findIndex((l) => l.startsWith(`## ${heading}`));
   if (start < 0) return [];
   const rows: string[][] = [];
@@ -25,8 +27,8 @@ function tableRows(md: string, heading: string): string[][] {
     if (l.startsWith("## ")) break;
     if (!l.startsWith("|")) continue;
     const c = cells(l);
-    if (c[0] === "Door" || c[0] === "Path glob" || /^-+$/.test(c[0] ?? "-"))
-      continue;
+    if (/^-+$/.test(c[0] ?? "-")) continue;
+    if (!withHead && (c[0] === "Door" || c[0] === "Path glob")) continue;
     rows.push(c);
   }
   return rows;
@@ -52,11 +54,18 @@ export function parseBoard(name: string, md: string): Board {
       .map((glob) => ({ glob, lock: lock ?? "" })),
   );
   const cmd = /## Test command\s+`([^`]+)`/.exec(md)?.[1];
+  // Pipeline rows are `| stage | … | Output | … |`; header row names the columns.
+  const [head, ...rows] = tableRows(md, "Pipeline", true);
+  const out = head?.indexOf("Output") ?? -1;
+  const specStages = rows
+    .filter((r) => out >= 0 && /Kiro spec/i.test(r[out] ?? ""))
+    .map((r) => r[0] ?? "");
   return {
     name,
     doors,
     doorLocks,
     pathLocks,
+    specStages,
     ...(cmd ? { testCommand: cmd } : {}),
   };
 }
