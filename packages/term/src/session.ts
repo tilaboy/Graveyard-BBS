@@ -18,6 +18,7 @@ import {
   treeRows,
 } from "./screens.js";
 import { pathsIn } from "./format.js";
+import { AUTO_BOARD, formGuess } from "./route.js";
 import type { Action, Source } from "./source.js";
 import {
   boardNames,
@@ -682,15 +683,15 @@ export class Session {
     if (thread) void this.openFile(thread, path);
   }
 
-  /** [N]: open the new-task form; the board is the one here (or the first), selected. */
+  /**
+   * [N]: open the new-task form. On a board's thread list or one of its threads the board is
+   * that one; anywhere else it is `auto`: the task's words pick the board (issue #2).
+   */
   private startNewTask(): void {
     const v = this.view;
-    const s = this.o.source.state();
     const here =
-      v.screen === "tree"
-        ? treeRows(s, v)[treeCursor(treeRows(s, v), v)]?.board
-        : v.board;
-    const board = here && boardNames().includes(here) ? here : boardNames()[0]!;
+      v.screen === "threads" || v.screen === "thread" ? v.board : undefined;
+    const board = here && boardNames().includes(here) ? here : AUTO_BOARD;
     v.form = {
       field: "board",
       board,
@@ -732,15 +733,17 @@ export class Session {
     if (f.error?.field === f.field) delete f.error;
     switch (f.field) {
       case "board": {
-        // A picker over the five boards: arrows move, a typed letter jumps to the board it starts.
-        const list = boardNames();
+        // A picker over auto and the five boards: arrows move, a typed letter jumps to the
+        // board it starts (never to auto).
+        const boards = boardNames();
+        const list = [AUTO_BOARD, ...boards];
         const i = Math.max(0, list.indexOf(f.board));
         if (k === "enter") step(1);
         else if (k === "up" || k === "down")
           f.board =
             list[(i + (k === "up" ? -1 : 1) + list.length) % list.length]!;
         else if (ch) {
-          const hit = list.find((b) => b.startsWith(ch.toLowerCase()));
+          const hit = boards.find((b) => b.startsWith(ch.toLowerCase()));
           if (hit) f.board = hit;
         }
         f.fresh = true;
@@ -772,9 +775,10 @@ export class Session {
     const v = this.view;
     const f = v.form;
     if (!f) return;
-    const board = f.board.trim().toLowerCase();
+    const picked = f.board.trim().toLowerCase();
     const title = f.title.trim();
-    if (!boardNames().includes(board)) {
+    const auto = picked === AUTO_BOARD;
+    if (!auto && !boardNames().includes(picked)) {
       f.error = {
         field: "board",
         text: `Pick one of: ${boardNames()
@@ -792,19 +796,32 @@ export class Session {
       f.field = "title";
       return;
     }
+    // Blank lines at either end go; the newlines inside stay.
+    const body = f.body.replace(/^\s*\n|\s+$/g, "");
+    const guess = auto ? formGuess(f) : undefined;
+    if (auto && !guess) {
+      f.error = {
+        field: "board",
+        text: "No board fits these words. Pick one with ↑↓ or a letter.",
+      };
+      f.field = "board";
+      return;
+    }
+    const board = guess?.board ?? picked;
     delete v.form;
     const s = this.o.source.state();
     const base = `${board}-${slugOf(title)}`;
     let thread = base;
     for (let i = 2; s.p.tasks[thread]; i++) thread = `${base}-${i}`;
-    // Blank lines at either end go; the newlines inside stay.
-    const body = f.body.replace(/^\s*\n|\s+$/g, "");
     const text = stripUnsafe(body ? `${title} — ${body}` : title).slice(
       0,
       TEXT_MAX,
     );
+    const why = guess
+      ? ` Board #${board} (auto: ${guess.why.slice(0, 3).join(", ")}).`
+      : "";
     void this.run({ type: "createTask", thread, text }, "new task", () => {
-      this.view.flash = `Created ${thread} (pending).`;
+      this.view.flash = `Created ${thread} (pending).${why}`;
     });
   }
 

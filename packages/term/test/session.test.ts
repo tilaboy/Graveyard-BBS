@@ -259,7 +259,7 @@ describe("Sysop [N] new task", () => {
   it("asks board, title and body, then sends create_task with a thread id", async () => {
     const { s, acts, screen } = start();
     s.key("n");
-    expect(screen()).toContain("Board  [arcade");
+    expect(screen()).toContain("Board  [auto");
     s.key("w\rFix the moat!\rDeep water\x13");
     await settle();
     expect(acts).toEqual([
@@ -271,13 +271,13 @@ describe("Sysop [N] new task", () => {
     ]);
     expect(screen()).toContain("Created websites-fix-the-moat (pending).");
   });
-  it("defaults the board, skips an empty body and avoids an existing thread id", async () => {
+  it("picks the board from the words, skips an empty body and avoids an existing thread id", async () => {
     const { s, acts } = start();
-    s.key("n\rLanding\x13"); // arcade-landing, no body
-    s.key("n\rSnake\x13"); // arcade-snake exists -> arcade-snake-2
+    s.key("n\rBlog\x13"); // auto: "blog" -> websites-blog, no body
+    s.key("n\rSnake\x13"); // auto: "snake" -> arcade; arcade-snake exists -> arcade-snake-2
     await settle();
     expect(acts.map((a) => a.type === "createTask" && a.thread)).toEqual([
-      "arcade-landing",
+      "websites-blog",
       "arcade-snake-2",
     ]);
   });
@@ -304,7 +304,7 @@ describe("Sysop [N] new task", () => {
         voice: "v",
       },
     });
-    s.key("n\rTitle\x13");
+    s.key("na\rTitle\x13"); // a: #arcade
     await settle();
     expect(screen()).toContain("ACCESS DENIED");
     expect(screen()).toContain("ROLE_DENIED");
