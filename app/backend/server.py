@@ -89,9 +89,10 @@ class Bbs:
                 gy.write_url(self.url.split("/term/")[0])
             elif line:
                 last = line
+                print(f"graveyard: {line}", file=sys.stderr, flush=True)
         self.url = ""
         gy.write_url("")
-        self.error = f"graveyard serve stopped: {last}"
+        self.error = f"graveyard serve stopped: {last if last else '(no output)'}"
 
     def launch(self) -> dict:
         return {"url": self.url, "error": self.error}

@@ -27,8 +27,18 @@ def clone_repo(home: Path) -> None:
             ["git", "clone", REPO_URL, str(home)],
             check=True,
             stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
             timeout=120,
+        )
+        # Install dependencies
+        print(f"Installing Node dependencies...", file=sys.stderr, flush=True)
+        subprocess.run(
+            ["npm", "install"],
+            cwd=home,
+            check=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            timeout=300,
         )
         # Create empty database
         db_dir = home / ".graveyard"
@@ -51,14 +61,18 @@ INSERT INTO callers (handle, role) VALUES ('sysop', 'sysop');
                 ],
                 check=True,
                 stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
+                stderr=subprocess.PIPE,
             )
         print("Graveyard BBS ready at", home, file=sys.stderr, flush=True)
     except subprocess.CalledProcessError as e:
-        raise SystemExit(f"Failed to clone BBS repo: {e}")
-    except FileNotFoundError:
         raise SystemExit(
-            "git or sqlite3 not found. Install them or set GRAVEYARD_HOME to an existing checkout."
+            f"Failed to initialize BBS repo: {e}\n"
+            "Make sure you have git, Node.js 22+, npm, and sqlite3 installed."
+        )
+    except FileNotFoundError as e:
+        raise SystemExit(
+            f"Required tool not found: {e}\n"
+            "Install git, Node.js 22+, npm, and sqlite3, or set GRAVEYARD_HOME to an existing checkout."
         )
 
 
