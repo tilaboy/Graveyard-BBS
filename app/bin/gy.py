@@ -5,25 +5,80 @@ usage: gy.py mcp | serve [args] | moderator <args>
 import os
 import re
 import shutil
+import subprocess
 import sys
+import time
 from pathlib import Path
 
 SERVER = "packages/server/bin/graveyard.mjs"
 MODERATOR = "packages/moderator/bin/moderator.mjs"
 HOME_FILE = Path.home() / ".graveyard-bbs-home"
+REPO_URL = "https://github.com/tilaboy/Graveyard-BBS.git"
+
+
+def clone_repo(home: Path) -> None:
+    """Clone the BBS repo if it doesn't exist. Create a fresh empty database."""
+    if (home / SERVER).is_file():
+        return  # Already cloned
+    print(f"Cloning Graveyard BBS to {home}...", file=sys.stderr, flush=True)
+    home.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        subprocess.run(
+            ["git", "clone", REPO_URL, str(home)],
+            check=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=120,
+        )
+        # Create empty database
+        db_dir = home / ".graveyard"
+        db_dir.mkdir(parents=True, exist_ok=True)
+        db_path = db_dir / "graveyard.db"
+        if not db_path.is_file():
+            subprocess.run(
+                [
+                    "sqlite3",
+                    str(db_path),
+                    """
+CREATE TABLE events (seq INTEGER PRIMARY KEY, id TEXT UNIQUE, at INTEGER,
+        thread_id TEXT, caller TEXT, type TEXT, body TEXT);
+CREATE TABLE callers (handle TEXT PRIMARY KEY, role TEXT, token_hash TEXT);
+CREATE TABLE lessons (id INTEGER PRIMARY KEY AUTOINCREMENT, text TEXT, tags TEXT,
+        project TEXT, board TEXT, thread TEXT, UNIQUE (project, thread, text));
+CREATE TABLE files (sha256 TEXT PRIMARY KEY, thread_id TEXT, name TEXT, path TEXT);
+INSERT INTO callers (handle, role) VALUES ('sysop', 'sysop');
+""",
+                ],
+                check=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        print("Graveyard BBS ready at", home, file=sys.stderr, flush=True)
+    except subprocess.CalledProcessError as e:
+        raise SystemExit(f"Failed to clone BBS repo: {e}")
+    except FileNotFoundError:
+        raise SystemExit(
+            "git or sqlite3 not found. Install them or set GRAVEYARD_HOME to an existing checkout."
+        )
 
 
 def find_home() -> Path:
-    """The BBS checkout: $GRAVEYARD_HOME, else the path in ~/.graveyard-bbs-home (R7.1)."""
+    """The BBS checkout: $GRAVEYARD_HOME, else auto-clone to ~/.graveyard-bbs-home (R7.1, R7.2)."""
     named = os.environ.get("GRAVEYARD_HOME", "")
     if not named and HOME_FILE.is_file():
         named = HOME_FILE.read_text(encoding="utf-8").strip()
-    home = Path(named).expanduser() if named else None
-    if home is None or not (home / SERVER).is_file():
-        raise SystemExit(
-            "Graveyard BBS checkout not found. Set GRAVEYARD_HOME, or write the checkout path "
-            f"into {HOME_FILE} (it must contain {SERVER})."
-        )
+    home = Path(named).expanduser() if named else Path.home() / ".graveyard-bbs-home"
+    
+    # Auto-clone on first run
+    if not (home / SERVER).is_file():
+        clone_repo(home)
+        # Save the path for future runs
+        try:
+            HOME_FILE.parent.mkdir(parents=True, exist_ok=True)
+            HOME_FILE.write_text(str(home), encoding="utf-8")
+        except OSError:
+            pass  # Non-fatal if we can't save it
+    
     return home
 
 

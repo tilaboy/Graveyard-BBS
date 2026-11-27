@@ -17,8 +17,8 @@
     "A graveyard MCP server and a moderator loop that spawns agents per task"
   ],
   "configuration": [
-    "Point the app at your checkout: echo /path/to/Graveyard-BBS > ~/.graveyard-bbs-home",
-    "Create the moderator token (npx --no-install graveyard caller add moderator --role moderator) and export it as GRAVEYARD_TOKEN",
+    "Create the moderator token: export GRAVEYARD_TOKEN=$(npx --no-install graveyard caller add moderator --role moderator)",
+    "Save it in Settings > Secrets > GRAVEYARD_TOKEN",
     "Resume the moderator-step schedule when you want agents spawned"
   ],
   "agents": [
