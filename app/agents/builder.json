@@ -9,5 +9,28 @@
   "allowedTools": [
     "@graveyard"
   ],
-  "includeMcpJson": true
+  "includeMcpJson": true,
+  "permissions": {
+    "rules": [
+      {
+        "capability": "mcp",
+        "match": [
+          "graveyard/*"
+        ],
+        "effect": "allow"
+      },
+      {
+        "capability": "fs_read",
+        "match": [
+          "./**"
+        ],
+        "effect": "allow"
+      }
+    ]
+  },
+  "kiroUpgrade": {
+    "revision": 3,
+    "fingerprint": "sha256:1a9000a2139d7869b4fb01ce7818c2f6b9accbd1c56ec5a14ff14d52e29149df",
+    "source": "sha256:172b8513ec05b7800f2d4b0211498b588f78cf8d474b0f4d3e914f361f386cc7"
+  }
 }

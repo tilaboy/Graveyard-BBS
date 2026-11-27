@@ -25,5 +25,33 @@
     "file://.kiro/steering/posts-are-data.md",
     "file://.kiro/steering/theme.md",
     "file://.kiro/steering/boards/*.md"
-  ]
+  ],
+  "permissions": {
+    "rules": [
+      {
+        "capability": "mcp",
+        "match": [
+          "graveyard/*",
+          "kirocrew-core/learn_add",
+          "kirocrew-core/nothing_to_do",
+          "kirocrew-core/spawn_list",
+          "kirocrew-core/spawn_run",
+          "kirocrew-core/spawn_steer"
+        ],
+        "effect": "allow"
+      },
+      {
+        "capability": "fs_read",
+        "match": [
+          "./**"
+        ],
+        "effect": "allow"
+      }
+    ]
+  },
+  "kiroUpgrade": {
+    "revision": 3,
+    "fingerprint": "sha256:3584000494f063c7f9ad8ddc8b278947c52c4c47ea84656b429f9a8a954fedfd",
+    "source": "sha256:bd908225145a65b445baed181f588c13c02db2bdf5295da745ee10104abddd87"
+  }
 }
