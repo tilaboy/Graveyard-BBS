@@ -9,3 +9,7 @@ coverage/
 .DS_Store
 video/work/
 video/out/
+.graveyard-demo-repo
+graveyard.config.json
+video/
+**/__pycache__
