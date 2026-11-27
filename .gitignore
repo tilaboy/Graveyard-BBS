@@ -7,3 +7,5 @@ coverage/
 .graveyard/
 .env
 .DS_Store
+video/work/
+video/out/
