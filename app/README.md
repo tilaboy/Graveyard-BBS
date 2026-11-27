@@ -24,9 +24,10 @@ the moderator spawn agents (it costs one model turn per wake).
 
 ## Images
 
-`assets/icon.png` (512x512), the App Store heroes `assets/hero-light.png` and `assets/hero-dark.png`
-(1600x900) and the detail banners `assets/hero-detail-light.png` and `assets/hero-detail-dark.png`
-(2400x576) are rendered from SVG sources in `docs/art/src/`. Re-render: `sh docs/art/render.sh`
+`assets/icon.png` (512x512), the App Store cover pages `assets/app-coverpage-light.png` and
+`assets/app-coverpage-dark.png` (1600x900), the detail headers `assets/app-header-light.png`
+and `assets/app-header-dark.png` (2400x576), and the thumbnail `assets/app-thumbnail.png` are
+rendered from SVG sources in `docs/art/src/`. Re-render: `sh docs/art/render.sh`
 (see `docs/art/README.md`).
 
 ## Validate the manifest (no install)
